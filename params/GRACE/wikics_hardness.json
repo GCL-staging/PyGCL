@@ -1,0 +1,16 @@
+{
+    "learning_rate": 0.01,
+    "weight_decay": 0.00001,
+    "hidden_dim": 256,
+    "proj_dim": 64,
+    "num_layers": 2,
+    "activation": "rrelu",
+    "augmentor1:drop_edge_prob": 0.2,
+    "augmentor2:drop_edge_prob": 0.1,
+    "augmentor1:drop_feat_prob": 0.1,
+    "augmentor2:drop_feat_prob": 0.1,
+    "hardness_infonce:tau": 0.9,
+    "hardness_infonce:tau_plus": 0.3,
+    "hardness_infonce:beta": 10,
+    "num_epochs": 2000
+}
