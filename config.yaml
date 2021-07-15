@@ -1,0 +1,67 @@
+experimentName: Hardness on CS
+searchSpace:
+  learning_rate:
+    _type: choice
+    _value: [0.1, 0.01, 0.001, 0.0005, 0.0001]
+  weight_decay:
+    _type: choice
+    _value: [0.001, 0.0001, 0.00001, 0.000001, 0.0000001, 0.00000005, 0.00000001]
+  hidden_dim:
+    _type: choice
+    _value: [32, 64, 128, 256, 512]
+  proj_dim:
+    _type: choice
+    _value: [32, 64, 128, 256, 512]
+  num_layers:
+    _type: choice
+    _value: [2, 3, 4, 5]
+  activation:
+    _type: choice
+    _value: ["relu", "hardtanh", "elu", "leakyrelu", "prelu", "rrelu"]
+  augmentor1:drop_edge_prob:
+    _type: choice
+    _value: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+  augmentor2:drop_edge_prob:
+    _type: choice
+    _value: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+  augmentor1:drop_feat_prob:
+    _type: choice
+    _value: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+  augmentor2:drop_feat_prob:
+    _type: choice
+    _value: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+  hardness_infonce:tau:
+    _type: choice
+    _value: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+  hardness_infonce:tau_plus:
+    _type: choice
+    _value: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+  hardness_infonce:beta:
+    _type: choice
+    _value: [1.0, 2.0, 3.0, 5.0, 10.0, 15.0, 20.0]
+  num_epochs:
+    _type: choice
+    _value: [50, 100, 200, 300, 500, 800, 1000, 1200, 1500, 1800, 2000]
+#  warmup_epochs:
+#    _type: choice
+#    _value: [100, 200, 300, 400, 500]
+#  vicreg_sim_loss_weight:
+#    _type: choice
+#    _value: [10.0, 15.0, 20.0, 25.0, 30.0, 40.0, 50.0]
+#  vicreg_var_loss_weight:
+#    _type: choice
+#    _value: [10.0, 15.0, 20.0, 25.0, 30.0, 40.0, 50.0]
+trialCommand: python train_node_l2l.py --dataset Coauthor-CS --param_path nni --loss hardness_infonce
+trialCodeDirectory: .
+trialGpuNumber: 1
+trialConcurrency: 2
+maxExperimentDuration: 72h
+maxTrialNumber: 10000
+tuner:
+  name: TPE
+  classArgs:
+    optimize_mode: maximize
+trainingService:
+  platform: local
+  useActiveGpu: True
+  gpuIndices: [6, 7]
