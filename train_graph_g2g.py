@@ -29,7 +29,7 @@ def train(model, optimizer, loader: DataLoader, device, param):
             data.x = torch.ones((data.batch.size(0), 1), dtype=torch.float32).to(device)
         optimizer.zero_grad()
         _, _, _, g1, g2 = model(data.x, edge_index=data.edge_index, batch=data.batch)
-        loss = model.loss(g1, g2, **param)
+        loss = model.loss(g1, g2, eps=1.0, **param)
         loss.backward()
         optimizer.step()
         tot_loss += loss.item()
@@ -70,11 +70,12 @@ def main():
         'base_model': 'GINConv',
         'batch_norm': False,
         'batch_size': 10,
+        'loss': 'infonce'
     }
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default='cuda:0')
     parser.add_argument('--dataset', type=str, default='PROTEINS')
-    parser.add_argument('--param_path', type=str, default='params/GlobalGRACE/proteins@current.json')
+    parser.add_argument('--param_path', type=str, default='params/GlobalGRACE/proteins.json')
     for k, v in default_param.items():
         if type(v) is dict:
             for subk, subv in v.items():

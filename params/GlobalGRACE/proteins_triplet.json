@@ -6,10 +6,20 @@
     "batch_size": 64,
     "num_layers": 5,
     "activation": "leakyrelu",
-    "drop_edge_prob1": 0.1,
-    "drop_edge_prob2": 0.5,
-    "drop_feat_prob1": 0,
-    "drop_feat_prob2": 0.2,
-    "tau": 0.6,
+    "augmentor1": {
+        "scheme": "ER+FM",
+        "drop_edge_prob": 0.1,
+        "drop_feat_prob": 0.0
+    },
+    "augmentor2": {
+        "scheme": "ER+FM",
+        "drop_edge_prob": 0.5,
+        "drop_feat_prob": 0.2
+    },
+    "loss": "triplet",
+    "infonce": {
+        "tau": 0.6
+    },
+    "patience": 100,
     "num_epochs": 200
 }

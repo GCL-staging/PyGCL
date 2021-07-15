@@ -106,7 +106,7 @@ class GCLJob(Job):
 
     def resolve(self, worker_id: int) -> List[Command]:
         objective_name = {
-            Objective.InfoNCE: 'nt_xent',
+            Objective.InfoNCE: 'infonce',
             Objective.Mixup: 'mixup',
             Objective.JSD: 'jsd',
             Objective.Triplet: 'triplet',
@@ -157,7 +157,7 @@ class GCLJob(Job):
                     stdout_redirect=self.log_path
                 )
             ]
-        else:
+        else:  # BYOL scripts
             return [
                 Command(
                     exe="python",
@@ -593,6 +593,60 @@ def hard_negative_objectives():
                     exp_name='hard-negative-objectives'
                 )
                 jobs.append(job)
+
+    return jobs
+
+
+@register_runner
+def shared_g2l():
+    jobs = []
+
+    datasets = ['PTC_MR', 'PROTEINS', 'IMDB-MULTI']
+    objectives = [Objective.InfoNCE, Objective.JSD, Objective.Triplet]
+
+    for i in range(10):
+        for dataset in datasets:
+            for objective in objectives:
+                job = GCLJob(
+                    dataset,
+                    Mode.LocalGlobal, objective,
+                    'FM', 'ER',
+                    i,
+                    exp_name='shared-g2l'
+                )
+                jobs.append(job)
+
+    return jobs
+
+
+@register_runner
+def rerun_l2l_g2g():
+    jobs = []
+
+    datasets = ['PTC_MR', 'PROTEINS', 'IMDB-MULTI']
+    objectives = [Objective.InfoNCE, Objective.JSD, Objective.Triplet]
+    modes = [Mode.LocalLocal, Mode.GlobalGlobal]
+
+    probs = {
+        'augmentor1:drop_edge_prob': 0.2,
+        'augmentor2:drop_edge_prob': 0.2,
+        'augmentor1:drop_feat_prob': 0.1,
+        'augmentor2:drop_feat_prob': 0.1,
+    }
+
+    for i in range(10):
+        for dataset in datasets:
+            for objective in objectives:
+                for mode in modes:
+                    job = GCLJob(
+                        dataset,
+                        mode, objective,
+                        'FM', 'ER',
+                        i,
+                        exp_name='rerun-l2l-g2g',
+                        **probs
+                    )
+                    jobs.append(job)
 
     return jobs
 

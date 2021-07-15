@@ -6,10 +6,20 @@
     "batch_size": 64,
     "num_layers": 2,
     "activation": "relu",
-    "drop_edge_prob1": 0.2,
-    "drop_edge_prob2": 0.1,
-    "drop_feat_prob1": 0,
-    "drop_feat_prob2": 0.2,
-    "tau": 0.5,
+    "augmentor1": {
+        "scheme": "ER+FM",
+        "drop_edge_prob": 0.2,
+        "drop_feat_prob": 0.0
+    },
+    "augmentor2": {
+        "scheme": "ER+FM",
+        "drop_edge_prob": 0.1,
+        "drop_feat_prob": 0.2
+    },
+    "loss": "jsd",
+    "infonce": {
+        "tau": 0.5
+    },
+    "patience": 100,
     "num_epochs": 100
 }

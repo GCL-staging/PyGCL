@@ -30,7 +30,7 @@ def train(model, optimizer, loader: DataLoader, device, param):
         _, z1, z2 = model(data.x, data.edge_index)
         h1 = model.projection(z1)
         h2 = model.projection(z2)
-        loss = model.loss(h1, h2, **param)
+        loss = model.loss(h1, h2, eps=1.0, **param)
         loss.backward()
         optimizer.step()
         tot_loss += loss.item()
@@ -72,6 +72,7 @@ def main():
         'base_model': 'GINConv',
         'batch_norm': False,
         'batch_size': 10,
+        'loss': 'infonce'
     }
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default='cuda:0')
