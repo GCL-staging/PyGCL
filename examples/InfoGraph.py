@@ -129,7 +129,7 @@ def main():
 
     gconv = GConv(input_dim=input_dim, hidden_dim=32, activation=torch.nn.ReLU, num_layers=2).to(device)
     encoder_model = Encoder(encoder=gconv, hidden_dim=32, embedding_dim=32 * 2).to(device)
-    contrast_model = SingleBranchContrastModel(loss=L.JSDLoss(), mode='G2L')
+    contrast_model = SingleBranchContrastModel(loss=L.JSD(), mode='G2L')
 
     optimizer = torch.optim.Adam(encoder_model.parameters(), lr=0.01)
 

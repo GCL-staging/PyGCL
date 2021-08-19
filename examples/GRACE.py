@@ -87,7 +87,7 @@ def main():
 
     gconv = GConv(input_dim=dataset.num_features, hidden_dim=32, activation=torch.nn.ReLU, num_layers=2).to(device)
     encoder_model = Encoder(encoder=gconv, augmentor=(aug1, aug2), hidden_dim=32, proj_dim=32).to(device)
-    contrast_model = DualBranchContrastModel(loss=L.InfoNCELoss(tau=0.2), mode='L2L')
+    contrast_model = DualBranchContrastModel(loss=L.InfoNCE(tau=0.2), mode='L2L')
 
     optimizer = torch.optim.Adam(encoder_model.parameters(), lr=0.01)
 
