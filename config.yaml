@@ -1,0 +1,52 @@
+experimentName: G2G InfoNCE on NCI1
+searchSpace:
+  opt:learning_rate:
+    _type: choice
+    _value: [0.1, 0.01, 0.001, 0.0005, 0.0001]
+  opt:weight_decay:
+    _type: choice
+    _value: [1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 5e-8, 1e-8]
+  opt:num_epochs:
+    _type: choice
+    _value: [50, 100, 200, 300, 500, 800, 1000, 1200, 1500, 1800, 2000]
+  encoder:hidden_dim:
+    _type: choice
+    _value: [32, 64, 128, 256, 512]
+  encoder:proj_dim:
+    _type: choice
+    _value: [32, 64, 128, 256, 512]
+  encoder:num_layers:
+    _type: choice
+    _value: [2, 3, 4, 5]
+  encoder:activation:
+    _type: choice
+    _value: ["relu", "hardtanh", "elu", "leakyrelu", "prelu", "rrelu"]
+  augmentor1:ND:prob:
+    _type: choice
+    _value: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+  augmentor2:ND:prob:
+    _type: choice
+    _value: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+  augmentor1:FM:prob:
+    _type: choice
+    _value: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+  augmentor2:FM:prob:
+    _type: choice
+    _value: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+  obj:infonce:tau:
+    _type: choice
+    _value: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+trialCommand: python nni_entry.py --dataset NCI1 --mode G2G
+trialCodeDirectory: .
+trialGpuNumber: 1
+trialConcurrency: 3
+maxExperimentDuration: 72h
+maxTrialNumber: 10000
+tuner:
+  name: TPE
+  classArgs:
+    optimize_mode: maximize
+trainingService:
+  platform: local
+  useActiveGpu: True
+  gpuIndices: 5,6,7

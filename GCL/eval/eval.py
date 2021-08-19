@@ -13,8 +13,8 @@ def get_split(num_samples: int, train_ratio: float = 0.1, test_ratio: float = 0.
     indices = torch.randperm(num_samples)
     return {
         'train': indices[:train_size],
-        'valid': indices[train_size: test_size + train_size],
-        'test': indices[test_size + train_size:]
+        'test': indices[train_size: test_size + train_size],
+        'valid': indices[test_size + train_size:]
     }
 
 

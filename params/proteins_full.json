@@ -1,0 +1,14 @@
+{
+    "opt:learning_rate": 0.0005,
+    "opt:weight_decay": 0.000001,
+    "opt:num_epochs": 200,
+    "encoder:hidden_dim": 64,
+    "encoder:proj_dim": 64,
+    "encoder:num_layers": 3,
+    "encoder:activation": "elu",
+    "augmentor1:ND:prob": 0.5,
+    "augmentor2:ND:prob": 0.1,
+    "augmentor1:FM:prob": 0.2,
+    "augmentor2:FM:prob": 0.3,
+    "obj:infonce:tau": 0.4
+}

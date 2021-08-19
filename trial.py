@@ -10,7 +10,7 @@ from tqdm import tqdm
 from time import time_ns
 from GCL.eval import LREvaluator, get_split
 from GCL.utils import seed_everything, batchify_dict
-from GCL.models import EncoderModel, ContrastModel
+from GCL.models import EncoderModel, DualBranchContrastModel
 from HC.config_loader import ConfigLoader
 from torch_geometric.data import DataLoader
 
@@ -62,7 +62,7 @@ class GCLTrial(object):
             proj_dim=config.encoder.proj_dim
         ).to(self.device)
         self.encoder_model = encoder_model
-        contrast_model = ContrastModel(
+        contrast_model = DualBranchContrastModel(
             loss=get_loss(loss_name, **loss_params),
             mode=config.mode.value
         )
@@ -130,7 +130,26 @@ class GCLTrial(object):
         x = torch.cat(x, dim=0)
         y = torch.cat(y, dim=0)
 
-        split = get_split(name=self.config.dataset, num_samples=x.size()[0], dataset=self.dataset)
+        if self.config.dataset.startswith('ogb'):
+            split = self.dataset.get_idx_split()
+        elif self.config.dataset == 'WikiCS':
+            data = self.dataset[0]
+            train_mask = data['train_mask']
+            val_mask = data['val_mask']
+            test_mask = data['test_mask']
+            num_folds = train_mask.size()[1]
+
+            split = [
+                {
+                    'train': train_mask[:, i],
+                    'valid': val_mask[:, i],
+                    'test': test_mask
+                }
+                for i in range(num_folds)
+            ]
+        else:
+            split = get_split(num_samples=x.size()[0])
+
         if isinstance(split, list):
             results = []
             for sp in split:
