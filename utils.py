@@ -151,9 +151,9 @@ def get_loss(loss: str, **params) -> L.Loss:
     if loss == 'infonce':
         return L.InfoNCEForSP(**params)
     elif loss == 'jsd':
-        return L.JSDLoss(**params)
+        return L.JSD(**params)
     elif loss == 'triplet':
-        return L.TripletLoss(**params)
+        return L.TripletMarginForSP(**params)
     else:
         raise ValueError(f'invalid loss type: {loss}')
 
@@ -181,19 +181,19 @@ def get_loss_legacy(loss, mode):
             return L.TripletLossG2L()
     else:  # mode is L2L or G2G
         if loss == 'infonce':
-            return L.InfoNCELoss(loss_fn=L.nt_xent_loss)
+            return L.InfoNCE(loss_fn=L.nt_xent_loss)
         elif loss == 'debiased_infonce':
-            return L.InfoNCELoss(loss_fn=L.debiased_nt_xent_loss)
+            return L.InfoNCE(loss_fn=L.debiased_nt_xent_loss)
         elif loss == 'hardness_infonce':
-            return L.InfoNCELoss(loss_fn=L.hardness_nt_xent_loss)
+            return L.InfoNCE(loss_fn=L.hardness_nt_xent_loss)
         elif loss == 'subsampling_infonce':
-            return L.InfoNCELoss(loss_fn=L.subsampling_nt_xent_loss)
+            return L.InfoNCE(loss_fn=L.subsampling_nt_xent_loss)
         elif loss == 'ring_loss':
             return L.RingLoss()
         elif loss == 'jsd':
-            return L.JSDLoss(discriminator=lambda x, y: x @ y.t())
+            return L.JSD(discriminator=lambda x, y: x @ y.t())
         elif loss == 'triplet':
-            return L.TripletLoss()
+            return L.TripletMargin()
         elif loss == 'barlow_twins':
             return L.BTLoss()
         elif loss == 'vicreg':

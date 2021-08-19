@@ -13,7 +13,7 @@ def test_infonce_positive(anchor: torch.FloatTensor, sample: torch.FloatTensor):
     pos_mask = torch.eye(num_samples, dtype=torch.float32)
     neg_mask = 1. - pos_mask
 
-    loss_fn = L.InfoNCELoss(tau=0.1)
+    loss_fn = L.InfoNCE(tau=0.1)
     loss = loss_fn(anchor, sample, pos_mask, neg_mask)
 
     assert loss.item() > 0.0
@@ -49,7 +49,7 @@ def test_infonce_fast_golden(anchor: torch.FloatTensor, sample: torch.FloatTenso
     pos_mask = torch.eye(num_samples, dtype=torch.float32)
     neg_mask = 1. - pos_mask
 
-    loss_fn = L.InfoNCELoss(tau=0.1)
+    loss_fn = L.InfoNCE(tau=0.1)
 
     loss1 = loss_fn(anchor, sample, pos_mask, neg_mask)
     loss2 = nt_xent_loss_en(anchor, sample, pos_mask, 0.1)
