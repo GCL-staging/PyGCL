@@ -4,12 +4,12 @@ from HC.config_loader import ConfigLoader
 
 from ray import tune
 
-learning_rate = [0.01, 0.001, 0.0001]
-weight_decay = [0.00001]
-num_epochs = [100, 200, 500]
+learning_rate = [0.1, 0.01, 0.001, 0.0001]
+weight_decay = [1e-3, 1e-4, 1e-5, 1e-6]
+num_epochs = [100, 200, 500, 1000, 1200, 2000]
 objective = ['infonce', 'jsd', 'triplet']
-mode = ['L2L', 'G2L', 'G2G']
-base_config = '/home/xuyichen/dev/PyGCL/params/nci1.json'
+mode = ['L2L']
+base_config = '/home/xuyichen/dev/PyGCL/params/nci1@l2l.json'
 dataset = 'NCI1'
 
 
@@ -47,5 +47,5 @@ if __name__ == '__main__':
         tune.run(
             run_trial,
             config=space, metric='test_acc', mode='max', verbose=2,
-            resources_per_trial={'gpu': 1}, num_samples=3
+            resources_per_trial={'gpu': 1}, num_samples=1
         )

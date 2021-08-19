@@ -149,7 +149,7 @@ def get_compositional_augmentor(param: dict) -> A.Augmentor:
 
 def get_loss(loss: str, **params) -> L.Loss:
     if loss == 'infonce':
-        return L.InfoNCELoss(**params)
+        return L.InfoNCEForSP(**params)
     elif loss == 'jsd':
         return L.JSDLoss(**params)
     elif loss == 'triplet':
