@@ -14,12 +14,22 @@
         "conv": "GINConv"
     },
     "augmentor1": {
-        "drop_edge_prob": 0.1,
-        "drop_feat_prob": 0.2
+        "scheme": "ER+FM",
+        "ER": {
+            "prob": 0.1
+        },
+        "FM": {
+            "prob": 0.2
+        }
     },
     "augmentor2": {
-        "drop_edge_prob": 0.1,
-        "drop_feat_prob": 0.0
+        "scheme": "ER+FM",
+        "ER": {
+            "prob": 0.1
+        },
+        "FM": {
+            "prob": 0.0
+        }
     },
     "obj": {
         "loss": "infonce",

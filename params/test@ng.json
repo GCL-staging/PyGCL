@@ -1,5 +1,5 @@
 {
-  "dataset": "NCI1",
+  "dataset": "IMDB-MULTI",
   "opt": {
     "learning_rate": 0.01,
     "weight_decay": 5e-8,
