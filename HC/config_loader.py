@@ -68,7 +68,7 @@ class ConfigLoader(object):
 
         return recur(data, self.config_raw_type)
 
-    def get_config(self) -> T:
+    def get_config(self, before_load: dict, after_load: dict, after_args: dict) -> T:
         if self.arg_parser is not None:
             args = self.arg_parser.parse_args()
             config_path = args.config
@@ -88,6 +88,7 @@ class ConfigLoader(object):
             return loaded
 
         loaded = load_dict()
+        loaded = {**before_load, **loaded, **after_load}
         if self.arg_parser is not None:
             args_dict = args.__dict__
             args_dict = {k: v for k, v in args_dict.items() if v is not None}
@@ -104,8 +105,8 @@ class ConfigLoader(object):
 
         return self.construct_dataclass(loaded)
 
-    def __call__(self) -> T:
-        return self.get_config()
+    def __call__(self, before_load: dict = None, after_load: dict = None, after_args: dict = None) -> T:
+        return self.get_config(*[dict() if x is None else x for x in [before_load, after_load, after_args]])
 
     def construct_arg_parser(self) -> ArgumentParser:
         paths = extract_valid_paths(self.config_type)
