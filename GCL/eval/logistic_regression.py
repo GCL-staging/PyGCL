@@ -20,11 +20,12 @@ class LogisticRegression(nn.Module):
 
 class LREvaluator(BaseEvaluator):
     def __init__(self, num_epochs: int = 5000, learning_rate: float = 0.01,
-                 weight_decay: float = 0.0, test_interval: int = 20):
+                 weight_decay: float = 0.0, test_interval: int = 20, mute_pbar: bool = False):
         self.num_epochs = num_epochs
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.test_interval = test_interval
+        self.mute_pbar = mute_pbar
 
     def evaluate(self, x: torch.FloatTensor, y: torch.LongTensor, split: dict):
         device = x.device
@@ -42,37 +43,43 @@ class LREvaluator(BaseEvaluator):
         best_test_macro = 1
         best_epoch = 0
 
-        with tqdm(total=self.num_epochs, desc='(LR)',
-                  bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}{postfix}]') as pbar:
-            for epoch in range(self.num_epochs):
-                classifier.train()
-                optimizer.zero_grad()
+        if not self.mute_pbar:
+            pbar = tqdm(total=self.num_epochs, desc='(LR)',
+                        bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}{postfix}]')
 
-                output = classifier(x[split['train']])
-                loss = criterion(output_fn(output), y[split['train']])
+        for epoch in range(self.num_epochs):
+            classifier.train()
+            optimizer.zero_grad()
 
-                loss.backward()
-                optimizer.step()
+            output = classifier(x[split['train']])
+            loss = criterion(output_fn(output), y[split['train']])
 
-                if (epoch + 1) % self.test_interval == 0:
-                    classifier.eval()
-                    y_test = y[split['test']].detach().cpu().numpy()
-                    y_pred = classifier(x[split['test']]).argmax(-1).detach().cpu().numpy()
-                    test_micro = f1_score(y_test, y_pred, average='micro')
-                    test_macro = f1_score(y_test, y_pred, average='macro')
+            loss.backward()
+            optimizer.step()
 
-                    y_val = y[split['valid']].detach().cpu().numpy()
-                    y_pred = classifier(x[split['valid']]).argmax(-1).detach().cpu().numpy()
-                    val_micro = f1_score(y_val, y_pred, average='micro')
+            if (epoch + 1) % self.test_interval == 0:
+                classifier.eval()
+                y_test = y[split['test']].detach().cpu().numpy()
+                y_pred = classifier(x[split['test']]).argmax(-1).detach().cpu().numpy()
+                test_micro = f1_score(y_test, y_pred, average='micro')
+                test_macro = f1_score(y_test, y_pred, average='macro')
 
-                    if val_micro > best_val_micro:
-                        best_val_micro = val_micro
-                        best_test_micro = test_micro
-                        best_test_macro = test_macro
-                        best_epoch = epoch
+                y_val = y[split['valid']].detach().cpu().numpy()
+                y_pred = classifier(x[split['valid']]).argmax(-1).detach().cpu().numpy()
+                val_micro = f1_score(y_val, y_pred, average='micro')
 
+                if val_micro > best_val_micro:
+                    best_val_micro = val_micro
+                    best_test_micro = test_micro
+                    best_test_macro = test_macro
+                    best_epoch = epoch
+
+                if not self.mute_pbar:
                     pbar.set_postfix({'best test F1Mi': best_test_micro, 'F1Ma': best_test_macro})
                     pbar.update(self.test_interval)
+
+        if not self.mute_pbar:
+            pbar.close()
 
         return {
             'micro_f1': best_test_micro,
