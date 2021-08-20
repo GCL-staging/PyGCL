@@ -1,10 +1,9 @@
 from typing import *
 import os
-from pprint import PrettyPrinter
-from dataclasses import asdict
 from time import time_ns
 import torch
 from visualdl import LogWriter
+from pl_bolts.optimizers import LinearWarmupCosineAnnealingLR
 
 from tqdm import tqdm
 from time import time_ns
@@ -14,20 +13,21 @@ from GCL.models import EncoderModel, DualBranchContrastModel
 from HC.config_loader import ConfigLoader
 from torch_geometric.data import DataLoader
 
-from utils import load_dataset, get_compositional_augmentor, get_activation, get_loss, is_node_dataset, get_augmentor
+from utils import load_dataset, get_activation, get_loss, is_node_dataset, get_augmentor
 from models.GConv import Encoder
 
 from train_config import *
 
 
 class GCLTrial(object):
-    def __init__(self, config: ExpConfig):
+    def __init__(self, config: ExpConfig, mute_pbar: bool = False):
         self.config = config
         self.device = torch.device(config.device)
         self.writer = LogWriter(logdir=f'./log/{config.visualdl}/train')
         self.dataset = load_dataset('datasets', config.dataset, to_sparse_tensor=False)
         self.train_loader = DataLoader(self.dataset, batch_size=config.opt.batch_size)
         self.test_loader = DataLoader(self.dataset, batch_size=config.opt.batch_size, shuffle=False)
+        self.mute_pbar = mute_pbar
 
         input_dim = 1 if self.dataset.num_features == 0 else self.dataset.num_features
 
@@ -69,7 +69,14 @@ class GCLTrial(object):
         self.contrast_model = contrast_model
 
         optimizer = torch.optim.Adam(encoder_model.parameters(), lr=config.opt.learning_rate)
-        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=config.opt.reduce_lr_patience)
+        if self.config.obj.loss == Objective.BarlowTwins:
+            lr_scheduler = LinearWarmupCosineAnnealingLR(
+                optimizer=optimizer,
+                warmup_epochs=config.opt.warmup_epoch,
+                max_epochs=config.opt.num_epochs
+            )
+        else:
+            lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=config.opt.reduce_lr_patience)
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
 
@@ -87,7 +94,7 @@ class GCLTrial(object):
         self.encoder_model.train()
         epoch_losses = []
 
-        for data in self.train_loader:
+        for data in self.train_loader:  # noqa
             data = data.to(self.device)
 
             self.optimizer.zero_grad()
@@ -115,7 +122,7 @@ class GCLTrial(object):
 
         x = []
         y = []
-        for data in self.test_loader:
+        for data in self.test_loader:  # noqa
             data = data.to(self.config.device)
 
             if data.x is None:
@@ -153,12 +160,12 @@ class GCLTrial(object):
         if isinstance(split, list):
             results = []
             for sp in split:
-                evaluator = LREvaluator()
+                evaluator = LREvaluator(mute_pbar=self.mute_pbar)
                 result = evaluator.evaluate(x, y, sp)
                 results.append(result)
             result = batchify_dict(results, aggr_func=lambda xs: sum(xs) / len(xs))
         else:
-            evaluator = LREvaluator()
+            evaluator = LREvaluator(mute_pbar=self.mute_pbar)
             result = evaluator.evaluate(x, y, split)
 
         return result
@@ -167,30 +174,40 @@ class GCLTrial(object):
         if self.trained:
             return
 
-        with tqdm(total=self.config.opt.num_epochs, desc='(T)') as pbar:
-            for epoch in range(1, self.config.opt.num_epochs + 1):
-                loss = self.train_step()
+        if not self.mute_pbar:
+            pbar = tqdm(total=self.config.opt.num_epochs, desc='(T)')
+
+        for epoch in range(1, self.config.opt.num_epochs + 1):
+            loss = self.train_step()
+            if self.config.obj.loss == Objective.BarlowTwins:
+                self.lr_scheduler.step()  # noqa
+            else:
                 self.lr_scheduler.step(loss)
+
+            if not self.mute_pbar:
                 pbar.set_postfix({'loss': f'{loss:.4f}', 'wait': self.wait_window, 'lr': self.optimizer_lr})
                 pbar.update()
 
-                for cb in self.train_step_cbs:
-                    cb({'loss': loss})
+            for cb in self.train_step_cbs:
+                cb({'loss': loss})
 
-                if self.writer is not None:
-                    self.writer.add_scalar('loss', step=epoch, value=loss)
-                    self.writer.add_scalar('lr', step=epoch, value=self.optimizer_lr)
+            if self.writer is not None:
+                self.writer.add_scalar('loss', step=epoch, value=loss)
+                self.writer.add_scalar('lr', step=epoch, value=self.optimizer_lr)
 
-                if loss < self.best_loss:
-                    self.best_loss = loss
-                    self.best_epoch = epoch
-                    self.wait_window = 0
-                    self.save_checkpoint()
-                else:
-                    self.wait_window += 1
+            if loss < self.best_loss:
+                self.best_loss = loss
+                self.best_epoch = epoch
+                self.wait_window = 0
+                self.save_checkpoint()
+            else:
+                self.wait_window += 1
 
-                if self.wait_window > self.config.opt.patience:
-                    break
+            if self.wait_window > self.config.opt.patience:
+                break
+
+        if not self.mute_pbar:
+            pbar.close()
 
         self.trained = True
         if self.writer is not None:

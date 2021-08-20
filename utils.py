@@ -154,6 +154,8 @@ def get_loss(loss: str, **params) -> L.Loss:
         return L.JSD(**params)
     elif loss == 'triplet':
         return L.TripletMarginForSP(**params)
+    elif loss == 'bt':
+        return L.BarlowTwins(**params)
     else:
         raise ValueError(f'invalid loss type: {loss}')
 

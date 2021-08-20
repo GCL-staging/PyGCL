@@ -1,6 +1,7 @@
 from enum import Enum
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from HC.param_tuning import with_search_space
+from pprint import PrettyPrinter
 
 
 class ContrastMode(Enum):
@@ -20,6 +21,7 @@ class OptConfig:
     batch_size: int = 32
     patience: int = 200
     reduce_lr_patience: int = 100
+    warmup_epoch: int = 200
 
 
 class ConvType(Enum):
@@ -50,6 +52,8 @@ class Objective(Enum):
     InfoNCE = 'infonce'
     JSD = 'jsd'
     Triplet = 'triplet'
+    BarlowTwins = 'bt'
+    VICReg = 'vicreg'
 
 
 @dataclass
@@ -68,11 +72,23 @@ class Triplet:
 
 
 @dataclass
+class BTConfig:
+    pass
+
+
+@dataclass
+class VICRegConfig:
+    pass
+
+
+@dataclass
 class ObjConfig:
     loss: Objective = Objective.InfoNCE
     infonce: InfoNCE = InfoNCE()
     jsd: JSD = JSD()
     triplet: Triplet = Triplet()
+    bt: BTConfig = BTConfig()
+    vicreg: VICRegConfig = VICRegConfig()
 
 
 @dataclass
@@ -126,3 +142,7 @@ class ExpConfig:
 
     augmentor1: AugmentorConfig = AugmentorConfig()
     augmentor2: AugmentorConfig = AugmentorConfig()
+
+    def show(self):
+        printer = PrettyPrinter(indent=2)
+        printer.pprint(asdict(self))
