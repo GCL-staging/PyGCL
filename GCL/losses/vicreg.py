@@ -1,6 +1,8 @@
 import torch
 import torch.nn.functional as F
 
+from .losses import Loss
+
 
 def invariance_loss(h1, h2):
     return F.mse_loss(h1, h2)
@@ -33,6 +35,20 @@ def vicreg_loss(h1, h2, sim_weight, var_weight, cov_weight, *args, **kwargs):
 
     loss = sim_weight * sim_loss + var_weight * var_loss + cov_weight * cov_loss
     return loss
+
+
+class VICReg(Loss):
+    def __init__(self, sim_weight: float = 25.0, var_weight: float = 25.0, cov_weight: float = 1.0):
+        self.sim_weight = sim_weight
+        self.var_weight = var_weight
+        self.cov_weight = cov_weight
+
+    def compute(self, anchor, sample, pos_mask, neg_mask, *args, **kwargs) -> torch.FloatTensor:
+        loss = vicreg_loss(
+            anchor, sample,
+            sim_weight=self.sim_weight, var_weight=self.var_weight, cov_weight=self.cov_weight
+        )
+        return loss.mean()
 
 
 class VICRegLoss(torch.nn.Module):
