@@ -1,4 +1,4 @@
-experimentName: G2G InfoNCE on PROTEINS
+experimentName: G--G InfoNCE on COLLAB
 searchSpace:
   opt:learning_rate:
     _type: choice
@@ -36,7 +36,7 @@ searchSpace:
   obj:infonce:tau:
     _type: choice
     _value: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-trialCommand: python nni_entry.py --dataset PROTEINS --mode G2G
+trialCommand: python nni_entry.py --dataset COLLAB --mode G2G
 trialCodeDirectory: .
 trialGpuNumber: 1
 trialConcurrency: 2
