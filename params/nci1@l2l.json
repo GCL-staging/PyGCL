@@ -20,5 +20,6 @@
     "augmentor2:ND:prob": 0.1,
     "augmentor1:FM:prob": 0.0,
     "augmentor2:FM:prob": 0.0,
+    "obj:loss": "infonce",
     "obj:infonce:tau": 0.7
 }

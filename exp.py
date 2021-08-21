@@ -100,8 +100,38 @@ def imdbm_all_modes_e2():
     return generated
 
 
+@register
+def proteins_all_modes_e2():
+    l2l_config = load_config('/home/xuyichen/dev/PyGCL/params/proteins@l2l.json', after_args={'device': 'cuda'})
+    g2l_config = load_config('/home/xuyichen/dev/PyGCL/params/proteins@g2l.json', after_args={'device': 'cuda'})
+    g2g_config = load_config('/home/xuyichen/dev/PyGCL/params/proteins@g2g.json', after_args={'device': 'cuda'})
+
+    learning_rate = [0.1, 0.01, 0.001, 0.0001]
+    weight_decay = [1e-3, 1e-4, 1e-5, 1e-6]
+    num_epochs = [100, 200, 500, 1000, 1200, 2000]
+    objective = [Objective.InfoNCE, Objective.JSD, Objective.Triplet]
+
+    def generate_config(base_cfg: ExpConfig) -> List[ExpConfig]:
+        res = []
+        for _ in range(3):
+            for lr in learning_rate:
+                for wd in weight_decay:
+                    for e in num_epochs:
+                        for obj in objective:
+                            config = deepcopy(base_cfg)
+                            config.opt.learning_rate = lr
+                            config.opt.weight_decay = wd
+                            config.opt.num_epochs = e
+                            config.obj.loss = obj
+                            res.append(config)
+        return res
+
+    generated = [*generate_config(l2l_config), *generate_config(g2l_config), *generate_config(g2g_config)]
+    return generated
+
+
 if __name__ == '__main__':
-    ray.init(dashboard_host='0.0.0.0', dashboard_port=8000)
+    ray.init(dashboard_host='0.0.0.0', dashboard_port=10000)
     parser = argparse.ArgumentParser()
     parser.add_argument('--name', '-n', type=str, help='Name of the experiement.')
     args = parser.parse_args()
