@@ -1,6 +1,6 @@
 {
     "dataset": "PROTEINS",
-    "mode": "L2L",
+    "mode": "G2G",
     "opt:learning_rate": 0.0001,
     "opt:weight_decay": 1e-7,
     "opt:num_epochs": 1000,
