@@ -81,6 +81,22 @@ def general_e2(results):
     print(tabulate(acc_table, headers=['Objective', 'L2L', 'G2L', 'G2G']))
 
 
+@register
+def extra_e2(results):
+    data = group_by(lambda x: x['config'].mode, results)
+    data = map_dict(lambda x: group_by(lambda y: y['config'].obj.loss, x), data)
+    data = map_dict(lambda a: map_dict(lambda b: max(b, key=lambda c: c['result']['micro_f1']), a), data)
+
+    acc_table = []
+    for obj in [Objective.BarlowTwins, Objective.VICReg]:
+        row = [obj.value]
+        for mode in [ContrastMode.L2L, ContrastMode.G2L, ContrastMode.G2G]:
+            row.append(data[mode][obj]['result']['micro_f1'])
+        acc_table.append(row)
+
+    print(tabulate(acc_table, headers=['Objective', 'L2L', 'G2L', 'G2G']))
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--input', '-i', type=str, help='Input experiement data.')

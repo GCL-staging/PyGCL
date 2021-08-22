@@ -22,8 +22,13 @@ def run_trial(idx: int, total: int, config: ExpConfig):
     print(f'cuda: {cuda_devices}')
     config.show()
 
-    trial = GCLTrial(config, mute_pbar=True)
-    result = trial.execute()
+    try:
+        trial = GCLTrial(config, mute_pbar=True)
+        result = trial.execute()
+    except Exception as e:
+        print(f'>>> Trial {idx} / {total} <<<')
+        print(f'!!! catched error: {e}')
+        return {'config': config, 'result': None, 'error': str(e)}
 
     print(f'>>> Trial {idx} / {total} <<<')
     print(f'result: {result}')
@@ -126,7 +131,7 @@ def imdbm_all_modes_extra_e2():
                             res.append(config)
         return res
 
-    generated = [*generate_config(l2l_config), *generate_config(g2l_config), *generate_config(g2g_config)]
+    generated = [*generate_config(l2l_config), *generate_config(g2g_config)]
     return generated
 
 
@@ -161,15 +166,16 @@ def proteins_all_modes_e2():
 
 
 @register
-def collab_all_modes_e2():
+def collab_all_e2():
     l2l_config = load_config('/home/xuyichen/dev/PyGCL/params/collab@l2l.json', after_args={'device': 'cuda'})
     g2l_config = load_config('/home/xuyichen/dev/PyGCL/params/collab@g2l.json', after_args={'device': 'cuda'})
     g2g_config = load_config('/home/xuyichen/dev/PyGCL/params/collab@g2g.json', after_args={'device': 'cuda'})
 
-    learning_rate = [0.1, 0.01, 0.001, 0.0001]
-    weight_decay = [1e-3, 1e-4, 1e-5, 1e-6]
-    num_epochs = [100, 200, 500, 1000, 1200, 2000]
+    learning_rate = [0.01, 0.001, 0.0001]
+    weight_decay = [1e-4, 1e-5, 1e-6]
+    num_epochs = [300, 500, 1200, 2000]
     objective = [Objective.InfoNCE, Objective.JSD, Objective.Triplet]
+    extra_objective = objective + [Objective.BarlowTwins, Objective.VICReg]
 
     def generate_config(base_cfg: ExpConfig) -> List[ExpConfig]:
         res = []
@@ -177,7 +183,8 @@ def collab_all_modes_e2():
             for lr in learning_rate:
                 for wd in weight_decay:
                     for e in num_epochs:
-                        for obj in objective:
+                        obj_list = extra_objective if base_cfg.mode != ContrastMode.G2L else Objective
+                        for obj in obj_list:
                             config = deepcopy(base_cfg)
                             config.opt.learning_rate = lr
                             config.opt.weight_decay = wd

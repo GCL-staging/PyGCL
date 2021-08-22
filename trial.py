@@ -1,5 +1,7 @@
 from typing import *
 import os
+import os.path as osp
+import secrets
 from time import time_ns
 import torch
 from visualdl import LogWriter
@@ -80,7 +82,8 @@ class GCLTrial(object):
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
 
-        self.model_save_path = f'intermediate/{time_ns()}.pkl'
+        self.model_save_dir = osp.expanduser('~/gcl_trial_data/')
+        self.model_save_path = osp.join(self.model_save_dir, f'{secrets.token_hex(16)}.bin')
         self.best_loss = 1e20
         self.best_epoch = -1
         self.wait_window = 0
@@ -227,7 +230,8 @@ class GCLTrial(object):
 
     def _prepare_env(self):
         seed_everything(self.config.seed)
-        os.makedirs('intermediate', exist_ok=True)
+        os.makedirs(self.model_save_dir, exist_ok=True)
+        print(f'checkpoint file {self.model_save_path}')
 
     def execute(self):
         self._prepare_env()
