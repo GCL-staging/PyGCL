@@ -78,7 +78,9 @@ class BTConfig:
 
 @dataclass
 class VICRegConfig:
-    pass
+    sim_weight: float = 25.0
+    var_weight: float = 25.0
+    cov_weight: float = 1.0
 
 
 @dataclass

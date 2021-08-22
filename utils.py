@@ -156,6 +156,8 @@ def get_loss(loss: str, **params) -> L.Loss:
         return L.TripletMarginForSP(**params)
     elif loss == 'bt':
         return L.BarlowTwins(**params)
+    elif loss == 'vicreg':
+        return L.VICReg(**params)
     else:
         raise ValueError(f'invalid loss type: {loss}')
 
