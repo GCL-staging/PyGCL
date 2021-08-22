@@ -1,14 +1,25 @@
 {
+    "dataset": "COLLAB",
+    "mode": "L2L",
     "opt:learning_rate": 0.0001,
     "opt:weight_decay": 1e-8,
     "opt:num_epochs": 1200,
+    "opt": {
+        "batch_size": 80,
+        "patience": 200,
+        "reduce_lr_patience": 100
+    },
     "encoder:hidden_dim": 512,
     "encoder:proj_dim": 512,
     "encoder:num_layers": 4,
+    "encoder:conv": "GINConv",
     "encoder:activation": "elu",
+    "augmentor1:scheme": "ND+FM",
+    "augmentor2:scheme": "ND+FM",
     "augmentor1:ND:prob": 0.4,
     "augmentor2:ND:prob": 0.3,
     "augmentor1:FM:prob": 0.3,
     "augmentor2:FM:prob": 0.4,
+    "obj:loss": "infonce",
     "obj:infonce:tau": 0.4
 }
