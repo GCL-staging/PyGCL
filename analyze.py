@@ -34,7 +34,7 @@ def group_by(func, xs):
 
 
 @register
-def nci_e2(results):
+def g2l_g2g_e2(results):
     data = group_by(lambda x: x['config'].mode, results)
     data = map_dict(lambda x: group_by(lambda y: y['config'].obj.loss, x), data)
     data = map_dict(lambda a: map_dict(lambda b: max(b, key=lambda c: c['result']['micro_f1']), a), data)
@@ -47,6 +47,22 @@ def nci_e2(results):
         acc_table.append(row)
 
     print(tabulate(acc_table, headers=['Objective', 'G2L', 'G2G']))
+
+
+@register
+def l2l_e2(results):
+    data = group_by(lambda x: x['config'].mode, results)
+    data = map_dict(lambda x: group_by(lambda y: y['config'].obj.loss, x), data)
+    data = map_dict(lambda a: map_dict(lambda b: max(b, key=lambda c: c['result']['micro_f1']), a), data)
+
+    acc_table = []
+    for obj in [Objective.InfoNCE, Objective.JSD, Objective.Triplet]:
+        row = [obj.value]
+        for mode in [ContrastMode.L2L]:
+            row.append(data[mode][obj]['result']['micro_f1'])
+        acc_table.append(row)
+
+    print(tabulate(acc_table, headers=['Objective', 'L2L', 'G2L', 'G2G']))
 
 
 @register

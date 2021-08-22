@@ -143,7 +143,7 @@ def collab_all_modes_e2():
 
     def generate_config(base_cfg: ExpConfig) -> List[ExpConfig]:
         res = []
-        for _ in range(3):
+        for _ in range(1):
             for lr in learning_rate:
                 for wd in weight_decay:
                     for e in num_epochs:
