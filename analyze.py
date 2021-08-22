@@ -50,7 +50,7 @@ def nci_e2(results):
 
 
 @register
-def imdbm_e2(results):
+def general_e2(results):
     data = group_by(lambda x: x['config'].mode, results)
     data = map_dict(lambda x: group_by(lambda y: y['config'].obj.loss, x), data)
     data = map_dict(lambda a: map_dict(lambda b: max(b, key=lambda c: c['result']['micro_f1']), a), data)
