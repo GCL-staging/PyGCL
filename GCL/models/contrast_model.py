@@ -92,3 +92,53 @@ class DualBranchContrastModel(torch.nn.Module):
         l2 = self.loss(anchor=anchor2, sample=sample2, pos_mask=pos_mask2, neg_mask=neg_mask2, **self.kwargs)
 
         return (l1 + l2) * 0.5
+
+
+class MultipleBranchContrastModel(torch.nn.Module):
+    def __init__(self, loss, mode):
+        super(MultipleBranchContrastModel, self).__init__()
+        self.loss = loss
+        assert mode in ['L2L, G2G'], f'{self.__class__.__name__} for G2L mode is yet not implemented.'
+        self.mode = mode
+        self.sampler = SameScaleSampler(intraview_negs=False)
+
+    def forward(self, h_list, g_list, batch=None):
+        def contrast(anchor, samples):
+            sample_list = []
+            pos_mask_list = []
+            neg_mask_list = []
+
+            for sample in samples:
+                _, sample1, pos_mask1, neg_mask1 = self.sampler(anchor=anchor, sample=sample)
+                sample_list.append(sample1)
+                pos_mask_list.append(pos_mask1)
+                neg_mask_list.append(neg_mask1)
+
+            sample = torch.cat(sample_list, dim=0)
+            pos_mask = torch.cat(pos_mask_list, dim=1)
+            neg_mask = torch.cat(neg_mask_list, dim=1)
+
+            return anchor, sample, pos_mask, neg_mask
+
+        num_views = len(h_list)
+
+        if self.mode == 'L2L':
+            contrast_pairs = []
+            for i in range(num_views):
+                anchor = h_list[i]
+                samples = [h for j, h in enumerate(h_list) if j != i]
+                contrast_pairs.append(contrast(anchor, samples))
+        else:
+            assert self.mode == 'G2G'
+            contrast_pairs = []
+            for i in range(num_views):
+                anchor = g_list[i]
+                samples = [g for j, g in enumerate(g_list) if j != i]
+                contrast_pairs.append(contrast(anchor, samples))
+
+        loss = 0.0
+        for anchor, sample, pos_mask, neg_mask in contrast_pairs:
+            loss = loss + self.loss(anchor, sample, pos_mask, neg_mask)
+
+        loss = loss / num_views
+        return loss
