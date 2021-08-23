@@ -43,6 +43,7 @@ class ActivationType(Enum):
 class EncoderConfig:
     hidden_dim: int = with_search_space(256, space_type='choice', space_value=[2 ** i for i in range(6, 10)])
     proj_dim: int = with_search_space(256, space_type='choice', space_value=[2 ** i for i in range(6, 10)])
+    shared_proj: bool = True
     conv: ConvType = ConvType.GCNConv
     activation: ActivationType = ActivationType.ReLU
     num_layers: int = 2

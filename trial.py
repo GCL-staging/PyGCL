@@ -1,3 +1,4 @@
+from itertools import chain
 from typing import *
 import os
 import os.path as osp
@@ -60,17 +61,21 @@ class GCLTrial(object):
         encoder_model = EncoderModel(
             encoder=encoder,
             augmentor=(aug1, aug2),
-            hidden_dim=config.encoder.hidden_dim,
-            proj_dim=config.encoder.proj_dim
         ).to(self.device)
         self.encoder_model = encoder_model
         contrast_model = DualBranchContrastModel(
             loss=get_loss(loss_name, **loss_params),
-            mode=config.mode.value
-        )
+            mode=config.mode.value,
+            hidden_dim=config.encoder.hidden_dim,
+            proj_dim=config.encoder.proj_dim,
+            shared_proj=config.encoder.shared_proj
+        ).to(self.device)
         self.contrast_model = contrast_model
 
-        optimizer = torch.optim.Adam(encoder_model.parameters(), lr=config.opt.learning_rate)
+        optimizer = torch.optim.Adam(
+            chain(encoder_model.parameters(), contrast_model.parameters()),
+            lr=config.opt.learning_rate
+        )
         if self.config.obj.loss == Objective.BarlowTwins:
             lr_scheduler = LinearWarmupCosineAnnealingLR(
                 optimizer=optimizer,
@@ -109,9 +114,9 @@ class GCLTrial(object):
                 x = data.x
 
             z, g, z1, z2, g1, g2, z3, z4 = self.encoder_model(x, data.batch, data.edge_index, data.edge_attr)
-            h1, h2, h3, h4 = [self.encoder_model.projection(x) for x in [z1, z2, z3, z4]]
+            # h1, h2, h3, h4 = [self.encoder_model.projection(x) for x in [z1, z2, z3, z4]]
 
-            loss = self.contrast_model(h1, h2, g1, g2, data.batch, h3, h4)
+            loss = self.contrast_model(z1, z2, g1, g2, data.batch, z3, z4)
 
             loss.backward()
             self.optimizer.step()
