@@ -95,12 +95,20 @@ class DualBranchContrastModel(torch.nn.Module):
 
 
 class MultipleBranchContrastModel(torch.nn.Module):
-    def __init__(self, loss, mode):
+    def __init__(self,
+                 loss: Loss, mode: str,
+                 hidden_dim: int, proj_dim: int,
+                 shared_proj: int,
+                 *args, **kwargs):
         super(MultipleBranchContrastModel, self).__init__()
         self.loss = loss
         assert mode in ['L2L, G2G'], f'{self.__class__.__name__} for G2L mode is yet not implemented.'
         self.mode = mode
         self.sampler = SameScaleSampler(intraview_negs=False)
+
+        self.shared_proj = shared_proj
+        self.proj1 = get_mlp(hidden_dim, proj_dim)
+        self.proj2 = None if shared_proj else get_mlp(hidden_dim, proj_dim)
 
     def forward(self, h_list, g_list, batch=None):
         def contrast(anchor, samples):
@@ -138,6 +146,13 @@ class MultipleBranchContrastModel(torch.nn.Module):
 
         loss = 0.0
         for anchor, sample, pos_mask, neg_mask in contrast_pairs:
+            anchor = self.proj1(anchor)
+
+            if self.shared_proj:
+                sample = self.proj1(sample)
+            else:
+                sample = self.proj2(sample)
+
             loss = loss + self.loss(anchor, sample, pos_mask, neg_mask)
 
         loss = loss / num_views
