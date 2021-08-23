@@ -1,4 +1,4 @@
-experimentName: G--G InfoNCE on COLLAB
+experimentName: G--G InfoNCE on PROTEINS
 searchSpace:
   opt:learning_rate:
     _type: choice
@@ -21,6 +21,9 @@ searchSpace:
   encoder:activation:
     _type: choice
     _value: ["relu", "hardtanh", "elu", "leakyrelu", "prelu", "rrelu"]
+  encoder:shared_proj:
+    _type: choice
+    _value: [True, False]
   augmentor1:ND:prob:
     _type: choice
     _value: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
@@ -36,10 +39,10 @@ searchSpace:
   obj:infonce:tau:
     _type: choice
     _value: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-trialCommand: python nni_entry.py --dataset COLLAB --mode G2G
+trialCommand: python nni_entry.py --dataset PROTEINS --mode G2G
 trialCodeDirectory: .
 trialGpuNumber: 1
-trialConcurrency: 2
+trialConcurrency: 4
 maxExperimentDuration: 72h
 maxTrialNumber: 10000
 tuner:
@@ -49,4 +52,4 @@ tuner:
 trainingService:
   platform: local
   useActiveGpu: True
-  gpuIndices: 6,7
+  gpuIndices: 0,1,2,3

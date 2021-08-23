@@ -147,13 +147,13 @@ def get_compositional_augmentor(param: dict) -> A.Augmentor:
     return aug
 
 
-def get_loss(loss: str, **params) -> L.Loss:
+def get_loss(loss: str, single_positive: bool = True, **params) -> L.Loss:
     if loss == 'infonce':
-        return L.InfoNCEForSP(**params)
+        return L.InfoNCEForSP(**params) if single_positive else L.InfoNCE(**params)
     elif loss == 'jsd':
         return L.JSD(**params)
     elif loss == 'triplet':
-        return L.TripletMarginForSP(**params)
+        return L.TripletMarginForSP(**params) if single_positive else L.TripletMargin(**params)
     elif loss == 'bt':
         return L.BarlowTwins(**params)
     elif loss == 'vicreg':

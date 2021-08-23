@@ -197,6 +197,25 @@ def collab_all_e2():
     return generated
 
 
+@register
+def topo_aug_interaction():
+    base_config = load_config(
+        '/home/xuyichen/dev/PyGCL/params/general.json',
+        after_args={'device': 'cuda', 'mode': 'L2L', 'dataset': 'WikiCS', 'obj:loss': 'infonce'}
+    )
+
+    topo_aug_list = ['ORI', 'EA', 'ER', 'EA+ER', 'ND', 'PPR+ND', 'MKD+ND', 'RWSpass']
+
+    res = []
+    for aug1_scheme in topo_aug_list:
+        for aug2_scheme in topo_aug_list:
+            config = deepcopy(base_config)
+            config.augmentor1.scheme = aug1_scheme
+            config.augmentor2.scheme = aug2_scheme
+            res.append(config)
+
+    return res
+
 if __name__ == '__main__':
     ray.init(dashboard_host='0.0.0.0', dashboard_port=10000)
     parser = argparse.ArgumentParser()
