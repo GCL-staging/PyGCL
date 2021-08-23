@@ -13,6 +13,14 @@ def get_sampler(mode: str, intraview_negs: bool) -> Sampler:
         raise RuntimeError(f'unsupported mode: {mode}')
 
 
+def get_mlp(hidden_dim: int, proj_dim: int) -> torch.nn.Module:
+    return torch.nn.Sequential(
+        torch.nn.Linear(hidden_dim, proj_dim),
+        torch.nn.ELU(),
+        torch.nn.Linear(proj_dim, hidden_dim)
+    )
+
+
 class SingleBranchContrastModel(torch.nn.Module):
     def __init__(self, loss: Loss, mode: str, intraview_negs: bool = False, *args, **kwargs):
         super(SingleBranchContrastModel, self).__init__()
@@ -35,12 +43,21 @@ class SingleBranchContrastModel(torch.nn.Module):
 
 
 class DualBranchContrastModel(torch.nn.Module):
-    def __init__(self, loss: Loss, mode: str, intraview_negs: bool = False, *args, **kwargs):
+    def __init__(self,
+                 loss: Loss,
+                 mode: str,
+                 hidden_dim: int, proj_dim: int, shared_proj: bool = True,
+                 intraview_negs: bool = False,
+                 *args, **kwargs):
         super(DualBranchContrastModel, self).__init__()
         self.loss = loss
         self.mode = mode
         self.sampler = get_sampler(mode, intraview_negs=intraview_negs)
         self.kwargs = kwargs
+
+        self.shared_proj = shared_proj
+        self.proj1 = get_mlp(hidden_dim, proj_dim)
+        self.proj2 = None if shared_proj else get_mlp(hidden_dim, proj_dim)
 
     def forward(self, h1=None, h2=None, g1=None, g2=None, batch=None, h3=None, h4=None):
         if self.mode == 'L2L':
@@ -60,6 +77,16 @@ class DualBranchContrastModel(torch.nn.Module):
                 assert all(v is not None for v in [h1, h2, g1, g2, batch])
                 anchor1, sample1, pos_mask1, neg_mask1 = self.sampler(anchor=g1, sample=h2, batch=batch)
                 anchor2, sample2, pos_mask2, neg_mask2 = self.sampler(anchor=g2, sample=h1, batch=batch)
+
+        anchor1 = self.proj1(anchor1)
+        anchor2 = self.proj1(anchor2)
+
+        if self.shared_proj:
+            sample1 = self.proj1(sample1)
+            sample2 = self.proj1(sample2)
+        else:
+            sample1 = self.proj2(sample1)
+            sample2 = self.proj2(sample2)
 
         l1 = self.loss(anchor=anchor1, sample=sample1, pos_mask=pos_mask1, neg_mask=neg_mask1, **self.kwargs)
         l2 = self.loss(anchor=anchor2, sample=sample2, pos_mask=pos_mask2, neg_mask=neg_mask2, **self.kwargs)

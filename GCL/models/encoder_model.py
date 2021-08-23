@@ -2,22 +2,16 @@ import torch
 import GCL.augmentors as A
 
 from torch import nn
-import torch.nn.functional as F
 from typing import Optional, Tuple
 from torch_geometric.nn import global_add_pool
 
 
 class EncoderModel(nn.Module):
     def __init__(self, encoder: torch.nn.Module,
-                 augmentor: Tuple[A.Augmentor, A.Augmentor],
-                 hidden_dim: int, proj_dim: int):
+                 augmentor: Tuple[A.Augmentor, A.Augmentor]):
         super(EncoderModel, self).__init__()
         self.encoder = encoder
         self.augmentor = augmentor
-        self.num_hidden = hidden_dim
-
-        self.fc1 = torch.nn.Linear(hidden_dim, proj_dim)
-        self.fc2 = torch.nn.Linear(proj_dim, hidden_dim)
 
     def forward(self, x: torch.FloatTensor, batch: torch.LongTensor,
                 edge_index: torch.LongTensor, edge_weight: Optional[torch.Tensor] = None):
@@ -40,7 +34,3 @@ class EncoderModel(nn.Module):
         g2 = global_add_pool(z2, batch)
 
         return z, g, z1, z2, g1, g2, z3, z4
-
-    def projection(self, z: torch.Tensor) -> torch.Tensor:
-        z = F.elu(self.fc1(z))
-        return self.fc2(z)
