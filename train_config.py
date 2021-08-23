@@ -2,6 +2,7 @@ from enum import Enum
 from dataclasses import dataclass, asdict
 from HC.param_tuning import with_search_space
 from pprint import PrettyPrinter
+from pylens.lenses import derive_lenses
 
 
 class ContrastMode(Enum):
@@ -130,6 +131,7 @@ class AugmentorConfig:
     RWS: RWAugConfig = RWAugConfig()
 
 
+@derive_lenses
 @dataclass
 class ExpConfig:
     visualdl: str = None
@@ -142,6 +144,7 @@ class ExpConfig:
     obj: ObjConfig = ObjConfig()
 
     mode: ContrastMode = ContrastMode.L2L
+    num_views: int = 2
 
     augmentor1: AugmentorConfig = AugmentorConfig()
     augmentor2: AugmentorConfig = AugmentorConfig()
