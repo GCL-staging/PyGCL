@@ -183,7 +183,7 @@ def collab_all_e2():
             for lr in learning_rate:
                 for wd in weight_decay:
                     for e in num_epochs:
-                        obj_list = extra_objective if base_cfg.mode != ContrastMode.G2L else Objective
+                        obj_list = extra_objective if base_cfg.mode != ContrastMode.G2L else objective
                         for obj in obj_list:
                             config = deepcopy(base_cfg)
                             config.opt.learning_rate = lr
