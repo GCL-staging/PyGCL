@@ -12,7 +12,7 @@ from tqdm import tqdm
 from time import time_ns
 from GCL.eval import LREvaluator, get_split
 from GCL.utils import seed_everything, batchify_dict
-from GCL.models import EncoderModel, DualBranchContrastModel
+from GCL.models import EncoderModel, DualBranchContrastModel, MultipleBranchContrastModel
 from HC.config_loader import ConfigLoader
 from torch_geometric.data import DataLoader
 
@@ -60,16 +60,29 @@ class GCLTrial(object):
         loss_params = asdict(config.obj)[loss_name]
         encoder_model = EncoderModel(
             encoder=encoder,
-            augmentor=(aug1, aug2),
+            augmentor=(aug1, aug2) if config.num_views == 2 else [aug1 for _ in range(config.num_views)],
+            num_views=config.num_views
         ).to(self.device)
         self.encoder_model = encoder_model
-        contrast_model = DualBranchContrastModel(
-            loss=get_loss(loss_name, **loss_params),
-            mode=config.mode.value,
-            hidden_dim=config.encoder.hidden_dim,
-            proj_dim=config.encoder.proj_dim,
-            shared_proj=config.encoder.shared_proj
-        ).to(self.device)
+
+        assert config.num_views >= 2
+        if config.num_views == 2:
+            contrast_model = DualBranchContrastModel(
+                loss=get_loss(loss_name, single_positive=True, **loss_params),
+                mode=config.mode.value,
+                hidden_dim=config.encoder.hidden_dim,
+                proj_dim=config.encoder.proj_dim,
+                shared_proj=config.encoder.shared_proj
+            ).to(self.device)
+        else:
+            assert config.mode != ContrastMode.G2L
+            contrast_model = MultipleBranchContrastModel(
+                loss=get_loss(loss_name, single_positive=False, **loss_params),
+                mode=config.mode.value,
+                hidden_dim=config.encoder.hidden_dim,
+                proj_dim=config.encoder.proj_dim,
+                shared_proj=config.encoder.shared_proj
+            ).to(self.device)
         self.contrast_model = contrast_model
 
         optimizer = torch.optim.Adam(
@@ -113,10 +126,14 @@ class GCLTrial(object):
             else:
                 x = data.x
 
-            z, g, z1, z2, g1, g2, z3, z4 = self.encoder_model(x, data.batch, data.edge_index, data.edge_attr)
-            # h1, h2, h3, h4 = [self.encoder_model.projection(x) for x in [z1, z2, z3, z4]]
+            if self.config.num_views == 2:
+                z, g, z1, z2, g1, g2, z3, z4 = self.encoder_model(x, data.batch, data.edge_index, data.edge_attr)
+                # h1, h2, h3, h4 = [self.encoder_model.projection(x) for x in [z1, z2, z3, z4]]
 
-            loss = self.contrast_model(z1, z2, g1, g2, data.batch, z3, z4)
+                loss = self.contrast_model(z1, z2, g1, g2, data.batch, z3, z4)
+            else:
+                _, _, z_list, g_list = self.encoder_model(x, data.batch, data.edge_index, data.edge_attr)
+                loss = self.contrast_model(z_list, g_list, batch=data.batch)
 
             loss.backward()
             self.optimizer.step()
@@ -139,7 +156,10 @@ class GCLTrial(object):
             else:
                 input_x = data.x
 
-            z, g, z1, z2, g1, g2, z3, z4 = self.encoder_model(input_x, data.batch, data.edge_index, data.edge_attr)
+            if self.config.num_views == 2:
+                z, g, z1, z2, g1, g2, z3, z4 = self.encoder_model(input_x, data.batch, data.edge_index, data.edge_attr)
+            else:
+                z, g, _, _ = self.encoder_model(input_x, data.batch, data.edge_index, data.edge_attr)
             x.append(z if is_node_dataset(self.config.dataset) else g)
             y.append(data.y)
         x = torch.cat(x, dim=0)

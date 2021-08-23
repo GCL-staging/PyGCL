@@ -102,7 +102,7 @@ class MultipleBranchContrastModel(torch.nn.Module):
                  *args, **kwargs):
         super(MultipleBranchContrastModel, self).__init__()
         self.loss = loss
-        assert mode in ['L2L, G2G'], f'{self.__class__.__name__} for G2L mode is yet not implemented.'
+        assert mode in ['L2L', 'G2G'], f'{self.__class__.__name__} for {mode} mode is yet not implemented.'
         self.mode = mode
         self.sampler = SameScaleSampler(intraview_negs=False)
 
