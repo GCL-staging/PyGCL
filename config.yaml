@@ -1,4 +1,4 @@
-experimentName: G--G InfoNCE on PROTEINS
+experimentName: G--G InfoNCE on IMDB-M
 searchSpace:
   opt:learning_rate:
     _type: choice
@@ -8,7 +8,7 @@ searchSpace:
     _value: [0.001, 0.0001, 0.00001, 0.000001, 0.0000001, 0.00000001, 0.000000001]
   opt:num_epochs:
     _type: choice
-    _value: [50, 100, 200, 300, 500, 800, 1000, 1200, 1500, 1800, 2000]
+    _value: [100, 200, 300, 500, 800, 1000, 1200, 1500, 1800, 2000]
   encoder:hidden_dim:
     _type: choice
     _value: [32, 64, 128, 256, 512]
@@ -39,7 +39,7 @@ searchSpace:
   obj:infonce:tau:
     _type: choice
     _value: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-trialCommand: python nni_entry.py --dataset PROTEINS --mode G2G
+trialCommand: python nni_entry.py --dataset IMDB-MULTI --mode G2G
 trialCodeDirectory: .
 trialGpuNumber: 1
 trialConcurrency: 4
@@ -52,4 +52,4 @@ tuner:
 trainingService:
   platform: local
   useActiveGpu: True
-  gpuIndices: 0,1,2,3
+  gpuIndices: 4,5,6,7

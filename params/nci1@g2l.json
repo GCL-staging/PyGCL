@@ -1,25 +1,26 @@
 {
     "dataset": "NCI1",
     "mode": "G2L",
-    "opt:learning_rate": 0.0005,
-    "opt:weight_decay": 0.0001,
+    "opt:learning_rate": 0.0001,
+    "opt:weight_decay": 0.000001,
     "opt:num_epochs": 500,
     "opt": {
         "batch_size": 200,
         "patience": 200,
         "reduce_lr_patience": 100
     },
-    "encoder:hidden_dim": 128,
+    "encoder:hidden_dim": 512,
     "encoder:proj_dim": 128,
     "encoder:num_layers": 3,
     "encoder:conv": "GINConv",
-    "encoder:activation": "relu",
+    "encoder:activation": "elu",
+    "encoder:shared_proj": false,
     "augmentor1:scheme": "ND+FM",
     "augmentor2:scheme": "ND+FM",
-    "augmentor1:ND:prob": 0.1,
-    "augmentor2:ND:prob": 0.1,
+    "augmentor1:ND:prob": 0.2,
+    "augmentor2:ND:prob": 0.2,
     "augmentor1:FM:prob": 0.0,
-    "augmentor2:FM:prob": 0.0,
+    "augmentor2:FM:prob": 0.1,
     "obj:loss": "infonce",
-    "obj:infonce:tau": 0.7
+    "obj:infonce:tau": 0.9
 }

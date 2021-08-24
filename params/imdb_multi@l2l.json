@@ -2,8 +2,8 @@
     "dataset": "IMDB-MULTI",
     "mode": "L2L",
     "opt:learning_rate": 0.001,
-    "opt:weight_decay": 1e-9,
-    "opt:num_epochs": 1000,
+    "opt:weight_decay": 0.001,
+    "opt:num_epochs": 2000,
     "opt": {
         "batch_size": 200,
         "patience": 200,

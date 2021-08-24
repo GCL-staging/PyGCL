@@ -14,7 +14,7 @@ if __name__ == '__main__':
     config.device = 'cuda'
     config.obj.loss = Objective.InfoNCE
     config.encoder.conv = ConvType.GINConv
-    config.opt.batch_size = 80
+    config.opt.batch_size = 200
     config.opt.patience = 200
     config.opt.reduce_lr_patience = 100
     config.augmentor1.scheme = 'ND+FM'
