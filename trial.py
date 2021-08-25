@@ -96,7 +96,10 @@ class GCLTrial(object):
                 max_epochs=config.opt.num_epochs
             )
         else:
-            lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=config.opt.reduce_lr_patience)
+            if config.opt.reduce_lr_patience > 0:
+                lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=config.opt.reduce_lr_patience)
+            else:
+                lr_scheduler = None
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
 
@@ -210,7 +213,8 @@ class GCLTrial(object):
             if self.config.obj.loss == Objective.BarlowTwins:
                 self.lr_scheduler.step()  # noqa
             else:
-                self.lr_scheduler.step(loss)
+                if self.lr_scheduler is not None:
+                    self.lr_scheduler.step(loss)
 
             if not self.mute_pbar:
                 pbar.set_postfix({'loss': f'{loss:.4f}', 'wait': self.wait_window, 'lr': self.optimizer_lr})
