@@ -1,4 +1,4 @@
-experimentName: G--G InfoNCE on IMDB-M
+experimentName: L--L InfoNCE on IMDB-MULTI
 searchSpace:
   opt:learning_rate:
     _type: choice
@@ -21,9 +21,9 @@ searchSpace:
   encoder:activation:
     _type: choice
     _value: ["relu", "hardtanh", "elu", "leakyrelu", "prelu", "rrelu"]
-  encoder:shared_proj:
-    _type: choice
-    _value: [True, False]
+#  encoder:shared_proj:
+#    _type: choice
+#    _value: [True]
   augmentor1:ND:prob:
     _type: choice
     _value: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
@@ -39,10 +39,10 @@ searchSpace:
   obj:infonce:tau:
     _type: choice
     _value: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-trialCommand: python nni_entry.py --dataset IMDB-MULTI --mode G2G
+trialCommand: python nni_entry.py --dataset IMDB-MULTI --mode L2L
 trialCodeDirectory: .
 trialGpuNumber: 1
-trialConcurrency: 4
+trialConcurrency: 8
 maxExperimentDuration: 72h
 maxTrialNumber: 10000
 tuner:
@@ -52,4 +52,4 @@ tuner:
 trainingService:
   platform: local
   useActiveGpu: True
-  gpuIndices: 4,5,6,7
+  gpuIndices: 0,1,2,3,4,5,6,7
