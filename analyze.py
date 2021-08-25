@@ -74,7 +74,7 @@ def general_e2(results):
     results = [x for x in results if 'error' not in x]
     data = group_by(lambda x: x['config'].mode, results)
     data = map_dict(lambda x: group_by(lambda y: y['config'].obj.loss, x), data)
-    data = map_dict(lambda a: map_dict(lambda b: max(b, key=lambda c: c['result']['micro_f1']), a), data)
+    data = map_dict(lambda a: map_dict(lambda b: max(b, key=lambda c: c['result']['micro_f1']['mean']), a), data)
 
     acc_table = []
     settings_table = []
@@ -83,7 +83,9 @@ def general_e2(results):
         row1 = [obj.value]
         for mode in [ContrastMode.L2L, ContrastMode.G2L, ContrastMode.G2G]:
             if mode in data and obj in data[mode]:
-                row.append(data[mode][obj]['result']['micro_f1'])
+                acc = data[mode][obj]['result']['micro_f1']['mean']
+                std = data[mode][obj]['result']['micro_f1']['std']
+                row.append(f'{acc * 100:.2f} +- {std * 100:.2f}')
                 cfg: ExpConfig = data[mode][obj]['config']
                 s = f'lr={cfg.opt.learning_rate}'
                 s += f'\nwd={cfg.opt.weight_decay}'
@@ -95,7 +97,7 @@ def general_e2(results):
         acc_table.append(row)
         settings_table.append(row1)
 
-    print(tabulate(acc_table, headers=['Objective', 'L2L', 'G2L', 'G2G']))
+    print(tabulate(acc_table, headers=['Objective', 'L2L', 'G2L', 'G2G'], tablefmt='tsv'))
     print(tabulate(settings_table, headers=['Objective', 'L2L', 'G2L', 'G2G']))
 
 
@@ -107,7 +109,7 @@ def extra_e2(results):
     results = [x for x in results if 'error' not in x]
     data = group_by(lambda x: x['config'].mode, results)
     data = map_dict(lambda x: group_by(lambda y: y['config'].obj.loss, x), data)
-    data = map_dict(lambda a: map_dict(lambda b: max(b, key=lambda c: c['result']['micro_f1']), a), data)
+    data = map_dict(lambda a: map_dict(lambda b: max(b, key=lambda c: c['result']['micro_f1']['mean']), a), data)
 
     acc_table = []
     for obj in [Objective.BarlowTwins, Objective.VICReg]:
@@ -123,29 +125,29 @@ def extra_e2(results):
 def general_e1(results):
     for x in results:
         if 'error' in x:
-            print(f"error in trial: {x['error']}")
+            print(f"error in trial {x['config'].augmentor1.scheme}: {x['error']}")
     results = [x for x in results if 'error' not in x]
     data = group_with(lambda x: ((x['config'].dataset, x['config'].augmentor1.scheme), x['result']), results)
 
-    def calc_mean_std(xs):
-        if len(xs) == 0:
-            return dict()
-        keys = xs[0].keys()
-        res = dict()
-
-        for key in keys:
-            values = [x[key] for x in xs]
-            mean = np.mean(values)
-            std = np.std(values)
-            res[key] = {'mean': mean, 'std': std}
-
-        return res
-
-    data = {k: calc_mean_std(v) for k, v in data.items()}
+    # def calc_mean_std(xs):
+    #     if len(xs) == 0:
+    #         return dict()
+    #     keys = xs[0].keys()
+    #     res = dict()
+    #
+    #     for key in keys:
+    #         values = [x[key] for x in xs]
+    #         mean = np.mean(values)
+    #         std = np.std(values)
+    #         res[key] = {'mean': mean, 'std': std}
+    #
+    #     return res
+    #
+    # data = {k: calc_mean_std(v) for k, v in data.items()}
 
     print(data.keys())
 
-    dataset_list = ['NCI1', 'PROTEINS', 'IMDB-MULTI']
+    dataset_list = ['NCI1', 'PROTEINS', 'IMDB-MULTI', 'COLLAB']
     aug_list = [
         'ORI', 'EA', 'ER', 'EA+ER', 'ND', 'PPR', 'MKD', 'RWS',
         'FM', 'FD',
@@ -164,8 +166,8 @@ def general_e1(results):
         for dataset in dataset_list:
             symp = (dataset, aug)
             if symp in data:
-                acc = data[symp]['micro_f1']['mean']
-                std = data[symp]['micro_f1']['std']
+                acc = data[symp][0]['micro_f1']['mean']
+                std = data[symp][0]['micro_f1']['std']
                 row.append(f'{acc * 100:.2f} +- {std * 100:.2f}')
             else:
                 row.append('---')

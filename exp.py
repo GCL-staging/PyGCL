@@ -475,7 +475,7 @@ def collab_all_e1():
         return res
 
     def gen_dataset(dataset: str):
-        path = f'/home/xuyichen/dev/PyGCL/params/{dataset}@l2l.json'
+        path = f'/home/xuyichen/dev/PyGCL/params/{dataset}@best.json'
         cfg = load_config(path, after_args={'device': 'cuda'})
         return gen(cfg)
 
