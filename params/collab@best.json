@@ -5,7 +5,7 @@
     "opt:weight_decay": 1e-6,
     "opt:num_epochs": 2000,
     "opt": {
-        "batch_size": 80,
+        "batch_size": 50,
         "patience": 200,
         "reduce_lr_patience": 100
     },
