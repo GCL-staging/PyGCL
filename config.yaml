@@ -36,7 +36,7 @@ searchSpace:
   # obj:infonce:tau:
   #   _type: choice
   #   _value: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-trialCommand: python train_graph_BGRL_g2g.py --dataset IMDB-MULTI --mode L2L --param_path nni
+trialCommand: python train_graph_BGRL_g2g.py --dataset IMDB-MULTI --param_path nni
 trialCodeDirectory: .
 trialGpuNumber: 1
 trialConcurrency: 8

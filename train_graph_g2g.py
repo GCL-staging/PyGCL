@@ -5,7 +5,7 @@ import argparse
 import pretty_errors
 
 import GCL.utils.simple_param as SP
-from GCL.eval import SVM_classification
+from GCL.eval import SVM_classification, LR_classification
 
 from tqdm import tqdm
 from time import time_ns
@@ -50,11 +50,13 @@ def test(model, loader, device, seed):
         x.append(g.detach().cpu())
         y.append(data.y.cpu())
 
-    x = torch.cat(x, dim=0).numpy()
-    y = torch.cat(y, dim=0).numpy()
+    x = torch.cat(x, dim=0)
+    y = torch.cat(y, dim=0)
 
-    res = SVM_classification(x, y, seed)
+    # res = SVM_classification(x, y, seed)
     # print(f'(E) | Accuracy: {accuracy[0]:.4f} +- {accuracy[1]:.4f}')
+
+    res = LR_classification(x.to(device), y.to(device), None, split_mode='rand', train_ratio=0.1, test_ratio=0.8)
 
     return res
 
@@ -70,11 +72,12 @@ def main():
         'base_model': 'GINConv',
         'batch_norm': False,
         'batch_size': 10,
+        'num_epochs': 1000,
     }
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default='cuda:0')
     parser.add_argument('--dataset', type=str, default='PROTEINS')
-    parser.add_argument('--param_path', type=str, default='params/GlobalGRACE/proteins@current.json')
+    parser.add_argument('--param_path', type=str, default='params/GlobalGRACE/imdb_multi@bgrl.json')
     for k, v in default_param.items():
         if type(v) is dict:
             for subk, subv in v.items():
@@ -148,14 +151,15 @@ def main():
                 break
 
     print("=== Final ===")
-    print(f'(T) | Best epoch={best_epoch}, best loss={best_loss:.4f}')
-    model.load_state_dict(torch.load(model_save_path))
+    if param['num_epochs'] > 0:
+        print(f'(T) | Best epoch={best_epoch}, best loss={best_loss:.4f}')
+        model.load_state_dict(torch.load(model_save_path))
 
     test_result = test(model, test_loader, device, param['seed'])
-    print(f'(E) | Best test F1Mi={test_result["F1Mi"][0]:.4f}, F1Ma={test_result["F1Ma"][0]:.4f}')
+    print(f'(E) | Best test F1Mi={test_result["F1Mi"]:.4f}, F1Ma={test_result["F1Ma"]:.4f}')
 
     if nni_mode:
-        nni.report_final_result(test_result["F1Mi"][0])
+        nni.report_final_result(test_result["F1Mi"])
 
 
 if __name__ == '__main__':

@@ -78,11 +78,24 @@ def main():
         'weight_decay': 1e-5,
         'activation': 'prelu',
         'base_model': 'GINConv',
+        'augmentor1': {
+            'scheme': 'ND+FM'
+        },
+        'augmentor2': {
+            'scheme': 'ND+FM'
+        },
         'num_layers': 2,
         'patience': 100,
         'num_epochs': 1000,
         'batch_size': 32,
-        'dropout': 0.2
+        'dropout': 0.2,
+        "loss": "bootstrap",
+        "bootstrap": {
+            "encoder_norm": "batch",
+            "projector_norm": "batch",
+            "predictor_norm": "batch",
+            "momentum": 0.99
+        }
     }
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default='cuda:6')
