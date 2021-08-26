@@ -451,6 +451,43 @@ def aug_ablation():
 
 
 @register
+def nci1_all_e1():
+    aug_list = [
+        'ORI',
+        'EA', 'ER', 'EA+ER', 'ND',
+        'PPR',
+        'MKD',
+        'RWS',
+        'ER+FM', 'ER+FD',
+        'ND+FM', 'ND+FD',
+        'EA+FM', 'EA+FD',
+        'FM', 'FD',
+        'RWS+FM', 'RWS+FD',
+        'PPR+ER', 'PPR+FD', 'PPR+ND',
+        'MKD+ER', 'MKD+FD', 'MKD+ND'
+    ]
+
+    def gen(base_cfg: ExpConfig):
+        res = []
+        for scheme in aug_list:
+            func = ExpConfig._augmentor1._scheme.set(scheme) @ ExpConfig._augmentor2._scheme.set(scheme)
+            res.append(func(base_cfg))
+        return res
+
+    def gen_dataset(dataset: str):
+        path = f'/home/xuyichen/dev/PyGCL/params/{dataset}.json'
+        cfg = load_config(path, after_args={'device': 'cuda'})
+        return gen(cfg)
+
+    dataset_list = ['nci1']
+    configs = []
+    for dataset in dataset_list:
+        configs = configs + gen_dataset(dataset)
+
+    return configs
+
+
+@register
 def proteins_all_e1():
     aug_list = [
         'ORI',
