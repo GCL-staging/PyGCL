@@ -5,6 +5,7 @@ import math
 import torch
 import argparse
 import pretty_errors
+from torch.functional import split
 from tqdm import tqdm
 
 import GCL.utils.simple_param as SP
@@ -56,12 +57,14 @@ def test(model, loader, device, seed):
         x.append(z.detach().cpu())
         y.append(data.y.cpu())
 
-    x = torch.cat(x, dim=0).numpy()
-    y = torch.cat(y, dim=0).numpy()
+    x = torch.cat(x, dim=0)
+    y = torch.cat(y, dim=0)
 
-    with warnings.catch_warnings():
-        warnings.filterwarnings('ignore', category=ConvergenceWarning)
-        res = SVM_classification(x, y, seed)
+    # with warnings.catch_warnings():
+    #     warnings.filterwarnings('ignore', category=ConvergenceWarning)
+    #     res = SVM_classification(x, y, seed)
+
+    res = LR_classification(x.to(device), y.to(device), None, split_mode='rand', train_ratio=0.1, test_ratio=0.8)
 
     return res
 
@@ -153,14 +156,15 @@ def main():
                 break
 
     print('\n=== Final ===')
-    print(f'(T) | Best epoch={best_epoch}, best loss={best_loss:.4f}')
-    model.load_state_dict(torch.load(model_save_path))
+    if param['num_epochs'] > 0:
+        print(f'(T) | Best epoch={best_epoch}, best loss={best_loss:.4f}')
+        model.load_state_dict(torch.load(model_save_path))
 
     test_result = test(model, test_loader, device, param['seed'])
-    print(f'(E) | Best test F1Mi={test_result["F1Mi"][0]:.4f}, F1Ma={test_result["F1Ma"][0]:.4f}')
+    print(f'(E) | Best test F1Mi={test_result["F1Mi"]:.4f}, F1Ma={test_result["F1Ma"]:.4f}')
 
     if use_nni:
-        nni.report_final_result(test_result['F1Mi'][0])
+        nni.report_final_result(test_result['F1Mi'])
 
 
 if __name__ == '__main__':

@@ -30,11 +30,11 @@ def LR_classification(
     num_hidden = z.size(1)
     y = y.view(-1).to(device)
     # y = dataset.y.view(-1).to(device)
-    num_classes = dataset.y.max().item() + 1
+    num_classes = y.max().item() + 1
     classifier = LogisticRegression(num_hidden, num_classes).to(device)
     optimizer = Adam(classifier.parameters(), lr=0.01, weight_decay=0.0)
 
-    split = split_dataset(dataset, split_mode, *args, **kwargs)
+    split = split_dataset(dataset, split_mode, num_samples=z.shape[0], *args, **kwargs)
     split = {k: v.to(device) for k, v in split.items()}
     if 'valid' in split:
         split['val'] = split['valid']

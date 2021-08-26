@@ -11,7 +11,7 @@ def split_dataset(dataset, split_mode, *args, **kwargs):
         assert 'train_ratio' in kwargs and 'test_ratio' in kwargs
         train_ratio = kwargs['train_ratio']
         test_ratio = kwargs['test_ratio']
-        num_samples = dataset.x.size(0)
+        num_samples = kwargs['num_samples'] if 'num_samples' in kwargs else dataset.x.size(0)
         train_size = int(num_samples * train_ratio)
         test_size = int(num_samples * test_ratio)
         indices = torch.randperm(num_samples)
