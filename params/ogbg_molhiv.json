@@ -1,0 +1,25 @@
+{
+    "dataset": "ogbg-molhiv",
+    "mode": "L2L",
+    "opt:learning_rate": 0.01,
+    "opt:weight_decay": 5e-8,
+    "opt:num_epochs": 200,
+    "opt": {
+        "batch_size": 200,
+        "patience": 500,
+        "reduce_lr_patience": -1
+    },
+    "encoder:hidden_dim": 300,
+    "encoder:proj_dim": 300,
+    "encoder:num_layers": 5,
+    "encoder:conv": "GINConv",
+    "encoder:activation": "prelu",
+    "augmentor1:scheme": "ND+FM",
+    "augmentor2:scheme": "ND+FM",
+    "augmentor1:ND:prob": 0.1,
+    "augmentor2:ND:prob": 0.1,
+    "augmentor1:FM:prob": 0.2,
+    "augmentor2:FM:prob": 0.2,
+    "obj:loss": "infonce",
+    "obj:infonce:tau": 0.1
+}
