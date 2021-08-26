@@ -23,12 +23,13 @@ class LogisticRegression(nn.Module):
 
 
 def LR_classification(
-        z, dataset, num_epochs: int = 5000, test_interval: int = 20,
+        z, y, dataset, num_epochs: int = 5000, test_interval: int = 20,
         split_mode: str = 'rand', *args, **kwargs):
     device = z.device
     z = z.detach().to(device)
     num_hidden = z.size(1)
-    y = dataset.y.view(-1).to(device)
+    y = y.view(-1).to(device)
+    # y = dataset.y.view(-1).to(device)
     num_classes = dataset.y.max().item() + 1
     classifier = LogisticRegression(num_hidden, num_classes).to(device)
     optimizer = Adam(classifier.parameters(), lr=0.01, weight_decay=0.0)

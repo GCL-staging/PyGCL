@@ -17,8 +17,8 @@ def split_dataset(dataset, split_mode, *args, **kwargs):
         indices = torch.randperm(num_samples)
         return {
             'train': indices[:train_size],
-            'val': indices[train_size: test_size + train_size],
-            'test': indices[test_size + train_size:]
+            'test': indices[train_size: test_size + train_size],
+            'val': indices[test_size + train_size:]
         }
     elif split_mode == 'ogb':
         return dataset.get_idx_split()

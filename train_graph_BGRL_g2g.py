@@ -11,7 +11,7 @@ import GCL.utils.simple_param as SP
 
 from time import time_ns
 from torch.optim import Adam
-from GCL.eval import SVM_classification
+from GCL.eval import SVM_classification, LR_classification
 from GCL.utils import seed_everything
 from sklearn.exceptions import ConvergenceWarning
 from torch_geometric.data import DataLoader
@@ -82,7 +82,7 @@ def main():
         'dropout': 0.2
     }
     parser = argparse.ArgumentParser()
-    parser.add_argument('--device', type=str, default='cuda:2')
+    parser.add_argument('--device', type=str, default='cuda:6')
     parser.add_argument('--dataset', type=str, default='IMDB-MULTI')
     parser.add_argument('--param_path', type=str, default='params/BGRL/imdb_multi.json')
     for k, v in default_param.items():
