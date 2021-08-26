@@ -265,7 +265,8 @@ class GCLTrial(object):
     def execute(self):
         self._prepare_env()
         self.run_train_loop()
-        self.load_checkpoint()
+        if self.config.opt.num_epochs > 0:
+            self.load_checkpoint()
         result = self.evaluate()
         return result
 
