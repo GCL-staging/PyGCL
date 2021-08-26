@@ -65,6 +65,7 @@ def load_graph_dataset(path, name, to_sparse_tensor=True, to_dense=False):
         transform.append(T.ToSparseTensor())
     elif to_dense:
         transform.append(T.ToDense())
+
     dataset = TUDataset(path, name=name)
     if dataset[0].x is None:
         transform.append(T.Constant())
