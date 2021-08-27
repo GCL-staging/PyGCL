@@ -1,7 +1,7 @@
 import copy
 import torch
 import torch.nn.functional as F
-from torch_geometric.nn import GCNConv
+from torch_geometric.nn import GCNConv, global_add_pool
 
 
 class Normalize(torch.nn.Module):
@@ -47,9 +47,9 @@ class GConv(torch.nn.Module):
         return z, self.projection_head(z)
 
 
-class Encoder(torch.nn.Module):
-    def __init__(self, encoder, augmentor, hidden_dim, dropout=0.2, predictor_norm='batch'):
-        super(Encoder, self).__init__()
+class EncoderModel(torch.nn.Module):
+    def __init__(self, encoder, augmentor, hidden_dim, dropout=0.2, predictor_norm='batch',):
+        super(EncoderModel, self).__init__()
         self.online_encoder = encoder
         self.target_encoder = None
         self.augmentor = augmentor
@@ -72,19 +72,36 @@ class Encoder(torch.nn.Module):
             next_p = momentum * p.data + (1 - momentum) * new_p.data
             p.data = next_p
 
-    def forward(self, x, edge_index, edge_weight=None):
+    def forward(self, x, edge_index, edge_weight=None, batch=None):
         aug1, aug2 = self.augmentor
         x1, edge_index1, edge_weight1 = aug1(x, edge_index, edge_weight)
         x2, edge_index2, edge_weight2 = aug2(x, edge_index, edge_weight)
 
         h1, h1_online = self.online_encoder(x1, edge_index1, edge_weight1)
         h2, h2_online = self.online_encoder(x2, edge_index2, edge_weight2)
-
         h1_pred = self.predictor(h1_online)
         h2_pred = self.predictor(h2_online)
+
+        g1 = global_add_pool(h1, batch)
+        g2 = global_add_pool(h2, batch)
+        g1_online = global_add_pool(h1_online, batch)
+        g2_online = global_add_pool(h2_online, batch)
+        g1_pred = self.predictor(g1_online)
+        g2_pred = self.predictor(g2_online)
 
         with torch.no_grad():
             _, h1_target = self.get_target_encoder()(x1, edge_index1, edge_weight1)
             _, h2_target = self.get_target_encoder()(x2, edge_index2, edge_weight2)
+            g1_target = global_add_pool(h1_target, batch)
+            g2_target = global_add_pool(h2_target, batch)
 
-        return h1, h2, h1_pred, h2_pred, h1_target, h2_target
+        return {
+            'h1': h1, 'h2': h2,
+            'g1': g1, 'g2': g2,
+            'h1_online': h1_online, 'h2_online': h2_online,
+            'g1_online': g1_online, 'g2_online': g2_online,
+            'h1_pred': h1_pred, 'h2_pred': h2_pred,
+            'g1_pred': g1_pred, 'g2_pred': g2_pred,
+            'h1_target': h1_target.detach(), 'h2_target': h2_target.detach(),
+            'g1_target': g1_target.detach(), 'g2_target': g2_target.detach(),
+        }

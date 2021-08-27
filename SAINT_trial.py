@@ -4,36 +4,40 @@ import os
 import os.path as osp
 import secrets
 from time import time_ns
-from tqdm import tqdm
 import torch
 from visualdl import LogWriter
+from pl_bolts.optimizers import LinearWarmupCosineAnnealingLR
 
+from tqdm import tqdm
+from time import time_ns
 from GCL.eval import LREvaluator, get_split
-import GCL.losses as L
 from GCL.utils import seed_everything, batchify_dict
-from GCL.models import BootstrapContrast
-
+from GCL.models import EncoderModel, DualBranchContrastModel, MultipleBranchContrastModel
 from HC.config_loader import ConfigLoader
-
-from torch_geometric.data import DataLoader
-from torch_geometric.nn import global_add_pool
+from torch_geometric.data import GraphSAINTRandomWalkSampler
 
 from utils import load_dataset, get_activation, get_loss, is_node_dataset, get_augmentor
-from models.BGRL import EncoderModel, GConv
+from models.GConv import Encoder
+
 from train_config import *
 
 
-class BGRLTrial(object):
+class GCLTrial(object):
     def __init__(self, config: ExpConfig, mute_pbar: bool = False):
-        super(BGRLTrial, self).__init__()
-
         self.config = config
         self.device = torch.device(config.device)
         self.writer = LogWriter(logdir=f'./log/{config.visualdl}/train')
         self.dataset = load_dataset('datasets', config.dataset, to_sparse_tensor=False)
-        self.train_loader = DataLoader(self.dataset, batch_size=config.opt.batch_size)
-        self.test_loader = DataLoader(self.dataset, batch_size=config.opt.batch_size, shuffle=False)
+        assert len(self.dataset) == 1, 'SAINT trial only supports node datasets.'
+        self.data = self.dataset[0]
         self.mute_pbar = mute_pbar
+
+        self.loader = GraphSAINTRandomWalkSampler(
+            self.data, batch_size=config.opt.batch_size, walk_length=2,
+            num_steps=32, sample_coverage=100,
+            save_dir=self.dataset.processed_dir,
+            num_workers=128
+        )
 
         input_dim = 1 if self.dataset.num_features == 0 else self.dataset.num_features
 
@@ -50,30 +54,60 @@ class BGRLTrial(object):
         aug1 = augmentor_from_conf(config.augmentor1)
         aug2 = augmentor_from_conf(config.augmentor2)
 
-        encoder = GConv(
+        encoder = Encoder(
             input_dim=input_dim,
             hidden_dim=config.encoder.hidden_dim,
-            num_layers=config.encoder.num_layers
+            activation=get_activation(config.encoder.activation.value),
+            num_layers=config.encoder.num_layers,
+            base_conv=config.encoder.conv.value
         ).to(self.device)
         self.encoder = encoder
 
+        loss_name = config.obj.loss.value
+        loss_params = asdict(config.obj)[loss_name]
         encoder_model = EncoderModel(
-            encoder=encoder, augmentor=(aug1, aug2), hidden_dim=config.encoder.hidden_dim
+            encoder=encoder,
+            augmentor=(aug1, aug2) if config.num_views == 2 else [aug1 for _ in range(config.num_views)],
+            num_views=config.num_views
         ).to(self.device)
         self.encoder_model = encoder_model
 
-        contrast_model = BootstrapContrast(loss=L.BootstrapLatent(), mode=config.mode.value).to(self.device)
-
+        assert config.num_views >= 2
+        if config.num_views == 2:
+            contrast_model = DualBranchContrastModel(
+                loss=get_loss(loss_name, single_positive=True, **loss_params),
+                mode=config.mode.value,
+                hidden_dim=config.encoder.hidden_dim,
+                proj_dim=config.encoder.proj_dim,
+                shared_proj=config.encoder.shared_proj
+            ).to(self.device)
+        else:
+            assert config.mode != ContrastMode.G2L
+            contrast_model = MultipleBranchContrastModel(
+                loss=get_loss(loss_name, single_positive=False, **loss_params),
+                mode=config.mode.value,
+                hidden_dim=config.encoder.hidden_dim,
+                proj_dim=config.encoder.proj_dim,
+                shared_proj=config.encoder.shared_proj
+            ).to(self.device)
         self.contrast_model = contrast_model
 
         optimizer = torch.optim.Adam(
             chain(encoder_model.parameters(), contrast_model.parameters()),
             lr=config.opt.learning_rate
         )
-        if config.opt.reduce_lr_patience > 0:
-            lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=config.opt.reduce_lr_patience)
+        if self.config.obj.loss == Objective.BarlowTwins:
+            lr_scheduler = LinearWarmupCosineAnnealingLR(
+                optimizer=optimizer,
+                warmup_epochs=config.opt.warmup_epoch,
+                max_epochs=config.opt.num_epochs
+            )
         else:
-            lr_scheduler = None
+            if config.opt.reduce_lr_patience > 0:
+                lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
+                                                                          patience=config.opt.reduce_lr_patience)
+            else:
+                lr_scheduler = None
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
 
@@ -92,27 +126,26 @@ class BGRLTrial(object):
         self.encoder_model.train()
         epoch_losses = []
 
-        for data in self.train_loader:  # noqa
+        for data in self.loader:  # noqa
             data = data.to(self.device)
 
             self.optimizer.zero_grad()
 
-            if data.x is None:
-                num_nodes = data.batch.size()[0]
-                x = torch.ones((num_nodes, 1), dtype=torch.float32, device=data.batch.device)
+            x = data.x
+
+            batch = torch.zeros((x.shape[0],), dtype=torch.long, device=x.device)
+
+            if self.config.num_views == 2:
+                z, g, z1, z2, g1, g2, z3, z4 = self.encoder_model(x, batch, data.edge_index, data.edge_attr)
+                # h1, h2, h3, h4 = [self.encoder_model.projection(x) for x in [z1, z2, z3, z4]]
+
+                loss = self.contrast_model(z1, z2, g1, g2, batch, z3, z4)
             else:
-                x = data.x
-
-            model_output = self.encoder_model(
-                x, data.edge_index, data.edge_attr, batch=data.batch
-            )
-
-            loss = self.contrast_model(**model_output)
+                _, _, z_list, g_list = self.encoder_model(x, batch, data.edge_index, data.edge_attr)
+                loss = self.contrast_model(z_list, g_list, batch=batch)
 
             loss.backward()
             self.optimizer.step()
-
-            self.encoder_model.update_target_encoder(0.99)
 
             epoch_losses.append(loss.item())
 
@@ -123,26 +156,19 @@ class BGRLTrial(object):
 
         x = []
         y = []
-        for data in self.test_loader:  # noqa
+        for data in self.loader:  # noqa
             data = data.to(self.config.device)
 
-            if data.x is None:
-                num_nodes = data.batch.size()[0]
-                input_x = torch.ones((num_nodes, 1), dtype=torch.float32, device=data.batch.device)
+            input_x = data.x
+
+            batch = torch.zeros((input_x.shape[0],), dtype=torch.long, device=input_x.device)
+
+            if self.config.num_views == 2:
+                z, g, z1, z2, g1, g2, z3, z4 = self.encoder_model(input_x, batch, data.edge_index, data.edge_attr)
             else:
-                input_x = data.x
-
-            model_output = self.encoder_model(input_x, data.edge_index, data.edge_attr, batch=data.batch)
-            h1 = model_output['h1']
-            h2 = model_output['h2']
-            z = torch.cat([h1, h2], dim=1)
-            g1 = model_output['g1']
-            g2 = model_output['g2']
-            g = torch.cat([g1, g2], dim=1)
-
+                z, g, _, _ = self.encoder_model(input_x, batch, data.edge_index, data.edge_attr)
             x.append(z if is_node_dataset(self.config.dataset) else g)
             y.append(data.y)
-
         x = torch.cat(x, dim=0)
         y = torch.cat(y, dim=0)
 
@@ -251,13 +277,14 @@ class BGRLTrial(object):
 
 if __name__ == '__main__':
     import pretty_errors  # noqa
-    loader = ConfigLoader(model=ExpConfig, config='params/proteins.json')
+
+    loader = ConfigLoader(model=ExpConfig, config='params/ogbn_arxiv.json')
     config = loader()
 
     printer = PrettyPrinter(indent=2)
     printer.pprint(asdict(config))
 
-    trial = BGRLTrial(config)
+    trial = GCLTrial(config)
     result = trial.execute()
 
     print("=== Final ===")

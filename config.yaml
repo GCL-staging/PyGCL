@@ -1,4 +1,4 @@
-experimentName: L--L InfoNCE on IMDB-MULTI
+experimentName: SAINT on ogbn-arxiv
 searchSpace:
   opt:learning_rate:
     _type: choice
@@ -24,10 +24,10 @@ searchSpace:
 #  encoder:shared_proj:
 #    _type: choice
 #    _value: [True]
-  augmentor1:ND:prob:
+  augmentor1:ER:prob:
     _type: choice
     _value: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
-  augmentor2:ND:prob:
+  augmentor2:ER:prob:
     _type: choice
     _value: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
   augmentor1:FM:prob:
@@ -39,7 +39,7 @@ searchSpace:
   obj:infonce:tau:
     _type: choice
     _value: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-trialCommand: python nni_entry.py --dataset IMDB-MULTI --mode L2L
+trialCommand: python SAINT_nni_entry.py --dataset ogbn-arxiv --mode L2L
 trialCodeDirectory: .
 trialGpuNumber: 1
 trialConcurrency: 8

@@ -168,7 +168,7 @@ class BootstrapContrast(torch.nn.Module):
 
     def forward(self, h1_pred=None, h2_pred=None, h1_target=None, h2_target=None,
                 g1_pred=None, g2_pred=None, g1_target=None, g2_target=None,
-                batch=None):
+                batch=None, **kwargs):
         if self.mode == 'L2L':
             assert all(v is not None for v in [h1_pred, h2_pred, h1_target, h2_target])
             anchor1, sample1, pos_mask1, _ = self.sampler(anchor=h1_target, sample=h2_pred)
