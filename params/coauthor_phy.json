@@ -1,27 +1,31 @@
 {
-    "dataset": "ogbn-arxiv",
+    "dataset": "Coauthor-Phy",
     "mode": "L2L",
     "opt": {
         "learning_rate": 0.01,
         "weight_decay": 1e-7,
-        "num_epochs": 1,
+        "num_epochs": 1500,
         "batch_size": 5000,
         "patience": 500,
         "reduce_lr_patience": -1
     },
-    "encoder:hidden_dim": 256,
-    "encoder:proj_dim": 256,
+    "encoder:hidden_dim": 128,
+    "encoder:proj_dim": 64,
     "encoder:num_layers": 2,
     "encoder:conv": "GCNConv",
-    "encoder:activation": "prelu",
+    "encoder:activation": "rrelu",
     "augmentor1": {
         "scheme": "ER+FM",
-        "ER:prob": 0.1,
-        "FM:prob": 0.4
+        "ER:prob": 0.4,
+        "FM:prob": 0.1
     },
     "augmentor2": {
         "scheme": "ER+FM",
         "ER:prob": 0.1,
-        "FM:prob": 0.5
+        "FM:prob": 0.4
+    },
+    "obj": {
+        "loss": "infonce",
+        "infonce:tau": 0.5
     }
 }

@@ -154,23 +154,21 @@ class GCLTrial(object):
     def evaluate(self):
         self.encoder_model.eval()
 
-        x = []
-        y = []
-        for data in self.loader:  # noqa
-            data = data.to(self.config.device)
+        data = self.data.to(self.device)
+        input_x = data.x
 
-            input_x = data.x
+        batch = torch.zeros((input_x.shape[0],), dtype=torch.long, device=input_x.device)
 
-            batch = torch.zeros((input_x.shape[0],), dtype=torch.long, device=input_x.device)
+        if self.config.num_views == 2:
+            z, g, z1, z2, g1, g2, z3, z4 = self.encoder_model(input_x, batch, data.edge_index, data.edge_attr)
+        else:
+            z, g, _, _ = self.encoder_model(input_x, batch, data.edge_index, data.edge_attr)
 
-            if self.config.num_views == 2:
-                z, g, z1, z2, g1, g2, z3, z4 = self.encoder_model(input_x, batch, data.edge_index, data.edge_attr)
-            else:
-                z, g, _, _ = self.encoder_model(input_x, batch, data.edge_index, data.edge_attr)
-            x.append(z if is_node_dataset(self.config.dataset) else g)
-            y.append(data.y)
-        x = torch.cat(x, dim=0)
-        y = torch.cat(y, dim=0)
+        x = z if is_node_dataset(self.config.dataset) else g
+        y = data.y.view(-1)
+
+        print(x.shape)
+        print(y.shape)
 
         if self.config.dataset.startswith('ogb'):
             split = self.dataset.get_idx_split()
