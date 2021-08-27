@@ -20,23 +20,34 @@ class LogisticRegression(nn.Module):
 
 class LREvaluator(BaseEvaluator):
     def __init__(self, num_epochs: int = 5000, learning_rate: float = 0.01,
-                 weight_decay: float = 0.0, test_interval: int = 20, mute_pbar: bool = False):
+                 weight_decay: float = 0.0, test_interval: int = 20, binary: bool = False, mute_pbar: bool = False):
         self.num_epochs = num_epochs
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.test_interval = test_interval
         self.mute_pbar = mute_pbar
+        self.binary = binary
 
     def evaluate(self, x: torch.FloatTensor, y: torch.LongTensor, split: dict):
         device = x.device
         x = x.detach().to(device)
         input_dim = x.size()[1]
         y = y.to(device)
+
         num_classes = y.max().item() + 1
-        classifier = LogisticRegression(input_dim, num_classes).to(device)
+
+        if self.binary:
+            assert num_classes == 2, f'Binary classification only handle 2 classes, but found {num_classes}.'
+            classifier = LogisticRegression(input_dim, 1).to(device)
+        else:
+            classifier = LogisticRegression(input_dim, num_classes).to(device)
         optimizer = Adam(classifier.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
-        output_fn = nn.LogSoftmax(dim=-1)
-        criterion = nn.NLLLoss()
+        if self.binary:
+            output_fn = lambda output: output.view(-1)
+            criterion = nn.BCEWithLogitsLoss()
+        else:
+            output_fn = nn.LogSoftmax(dim=-1)
+            criterion = nn.NLLLoss()
 
         best_val_micro = 0
         best_test_micro = 0
@@ -52,7 +63,8 @@ class LREvaluator(BaseEvaluator):
             optimizer.zero_grad()
 
             output = classifier(x[split['train']])
-            loss = criterion(output_fn(output), y[split['train']])
+            output = output_fn(output)
+            loss = criterion(output, y[split['train']])
 
             loss.backward()
             optimizer.step()
