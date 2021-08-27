@@ -525,6 +525,57 @@ def proteins_all_e1():
 
 
 @register
+def cs_ER_sensitivity():
+    probs = [0.01, 0.05, 0.1, 0.2, 0.5, 0.6, 0.7, 0.8]
+    base_cfg: ExpConfig = load_config('/home/xuyichen/dev/PyGCL/params/coauthor_cs.json', after_args={'device': 'cuda'})
+    base_cfg.augmentor1.scheme = 'ER'
+    base_cfg.augmentor2.scheme = 'ER'
+
+    res = []
+    for prob in probs:
+        cfg = deepcopy(base_cfg)
+        cfg.augmentor1.ER.prob = prob
+        cfg.augmentor2.ER.prob = prob
+        res.append(cfg)
+
+    return res
+
+
+@register
+def cs_ND_sensitivity():
+    probs = [0.01, 0.05, 0.1, 0.2, 0.5, 0.6, 0.7, 0.8]
+    base_cfg: ExpConfig = load_config('/home/xuyichen/dev/PyGCL/params/coauthor_cs.json', after_args={'device': 'cuda'})
+    base_cfg.augmentor1.scheme = 'ND'
+    base_cfg.augmentor2.scheme = 'ND'
+
+    res = []
+    for prob in probs:
+        cfg = deepcopy(base_cfg)
+        cfg.augmentor1.ND.prob = prob
+        cfg.augmentor2.ND.prob = prob
+        res.append(cfg)
+
+    return res
+
+
+@register
+def cs_EA_sensitivity():
+    probs = [0.01, 0.05, 0.1, 0.2, 0.5]
+    base_cfg: ExpConfig = load_config('/home/xuyichen/dev/PyGCL/params/coauthor_cs.json', after_args={'device': 'cuda'})
+    base_cfg.augmentor1.scheme = 'EA'
+    base_cfg.augmentor2.scheme = 'EA'
+
+    res = []
+    for prob in probs:
+        cfg = deepcopy(base_cfg)
+        cfg.augmentor1.EA.prob = prob
+        cfg.augmentor2.EA.prob = prob
+        res.append(cfg)
+
+    return res
+
+
+@register
 def collab_all_e1():
     aug_list = [
         'ORI',

@@ -1,0 +1,25 @@
+{
+    "dataset": "Coauthor-CS",
+    "mode": "L2L",
+    "opt:learning_rate": 0.0005,
+    "opt:weight_decay": 1e-5,
+    "opt:num_epochs": 1000,
+    "opt": {
+        "batch_size": 200,
+        "patience": 1000,
+        "reduce_lr_patience": -1
+    },
+    "encoder:hidden_dim": 256,
+    "encoder:proj_dim": 256,
+    "encoder:num_layers": 2,
+    "encoder:conv": "GCNConv",
+    "encoder:activation": "rrelu",
+    "augmentor1:scheme": "ER+FM",
+    "augmentor2:scheme": "ER+FM",
+    "augmentor1:ER:prob": 0.3,
+    "augmentor2:ER:prob": 0.2,
+    "augmentor1:FM:prob": 0.3,
+    "augmentor2:FM:prob": 0.4,
+    "obj:loss": "infonce",
+    "obj:infonce:tau": 0.4
+}
