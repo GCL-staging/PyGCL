@@ -5,6 +5,7 @@ import os.path as osp
 import secrets
 from time import time_ns, perf_counter
 import torch
+import torch.nn.functional as F
 from visualdl import LogWriter
 from pl_bolts.optimizers import LinearWarmupCosineAnnealingLR
 
@@ -226,6 +227,7 @@ class GCLTrial(object):
                 )
                 return res
 
+            x = F.normalize(x, p=2, dim=1)
             evaluator = MLPRegEvaluator(metric, metric_name='mae', mute_pbar=self.mute_pbar)
             result = evaluator.evaluate(x, y.view(-1), split)
         else:
