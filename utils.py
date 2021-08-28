@@ -2,11 +2,16 @@ import torch
 import os.path as osp
 import GCL.augmentors as A
 import GCL.losses as L
-import torch_geometric.transforms as T
 
+from torch.utils.data import Subset
 from torch_scatter import scatter_add
+
 from ogb.nodeproppred import PygNodePropPredDataset
+from ogb.graphproppred import PygGraphPropPredDataset
+from ogb.lsc import PygPCQM4MDataset
+
 from torch_geometric.datasets import Coauthor, WikiCS, Amazon, CitationFull, Planetoid, TUDataset
+import torch_geometric.transforms as T
 
 
 def load_dataset(path: str, name: str, to_sparse_tensor: bool = True, to_dense: bool = False):
@@ -65,6 +70,17 @@ def load_graph_dataset(path, name, to_sparse_tensor=True, to_dense=False):
         transform.append(T.ToSparseTensor())
     elif to_dense:
         transform.append(T.ToDense())
+
+    if name.startswith('ogbg'):
+        return PygGraphPropPredDataset(root=osp.join(path, 'OGB'), name=name, transform=T.Compose(transform))
+
+    if name == 'PCQM4M-10K':
+        subset_indices = torch.load('pcqm4m_subset_10000.pt')
+        dataset = PygPCQM4MDataset(root=path, transform=T.Compose(transform))
+        num_features = dataset.num_features
+        dataset = Subset(dataset, subset_indices.tolist())
+        dataset.num_features = num_features
+        return dataset
 
     dataset = TUDataset(path, name=name)
     if dataset[0].x is None:
@@ -135,7 +151,6 @@ def get_augmentor_legacy(aug_name: str, param: dict):
         return A.FeatureDropout(pf=param['drop_feat_prob'])
 
     raise NotImplementedError(f'unsupported augmentation name: {aug_name}')
-
 
 
 def get_compositional_augmentor(param: dict) -> A.Augmentor:

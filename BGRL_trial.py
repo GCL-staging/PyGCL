@@ -8,7 +8,7 @@ from tqdm import tqdm
 import torch
 from visualdl import LogWriter
 
-from GCL.eval import LREvaluator, get_split
+from GCL.eval import LREvaluator, get_split, GeneralLREvaluator
 import GCL.losses as L
 from GCL.utils import seed_everything, batchify_dict
 from GCL.models import BootstrapContrast
@@ -17,6 +17,8 @@ from HC.config_loader import ConfigLoader
 
 from torch_geometric.data import DataLoader
 from torch_geometric.nn import global_add_pool
+
+from ogb.graphproppred import Evaluator
 
 from utils import load_dataset, get_activation, get_loss, is_node_dataset, get_augmentor
 from models.BGRL import EncoderModel, GConv
@@ -50,10 +52,13 @@ class BGRLTrial(object):
         aug1 = augmentor_from_conf(config.augmentor1)
         aug2 = augmentor_from_conf(config.augmentor2)
 
+        is_molecole_dataset = config.dataset in {'ogbg-molhiv'}
         encoder = GConv(
             input_dim=input_dim,
             hidden_dim=config.encoder.hidden_dim,
-            num_layers=config.encoder.num_layers
+            num_layers=config.encoder.num_layers,
+            use_atom_encoder=is_molecole_dataset,
+            use_bond_encoder=is_molecole_dataset,
         ).to(self.device)
         self.encoder = encoder
 
@@ -173,6 +178,12 @@ class BGRLTrial(object):
                 result = evaluator.evaluate(x, y, sp)
                 results.append(result)
             result = batchify_dict(results, aggr_func=lambda xs: sum(xs) / len(xs))
+        elif self.config.dataset == 'ogbg-molhiv':
+            def metric(y_true, y_pred):
+                evaluator = Evaluator(name='ogbg-molhiv')
+                return evaluator.eval({'y_true': y_true, 'y_pred': y_pred})
+            evaluator = GeneralLREvaluator(metric, metric_name='AUC', mute_pbar=self.mute_pbar)
+            result = evaluator.evaluate(x, y, split)
         else:
             evaluator = LREvaluator(mute_pbar=self.mute_pbar)
             result = evaluator.evaluate(x, y, split)

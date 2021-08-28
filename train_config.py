@@ -29,6 +29,7 @@ class ConvType(Enum):
     GCNConv = 'GCNConv'
     GINConv = 'GINConv'
     GATConv = 'GATConv'
+    GINEConv = 'GINEConv'
 
 
 class ActivationType(Enum):
@@ -86,6 +87,13 @@ class VICRegConfig:
 
 
 @dataclass
+class BLConfig:
+    encoder_norm: str = 'batch'
+    projector_norm: str = 'batch'
+    predictor_norm: str = 'batch'
+
+
+@dataclass
 class ObjConfig:
     loss: Objective = Objective.InfoNCE
     infonce: InfoNCE = InfoNCE()
@@ -93,6 +101,7 @@ class ObjConfig:
     triplet: Triplet = Triplet()
     bt: BTConfig = BTConfig()
     vicreg: VICRegConfig = VICRegConfig()
+    bl: BLConfig = BLConfig()
 
 
 @dataclass

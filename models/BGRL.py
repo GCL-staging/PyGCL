@@ -2,6 +2,7 @@ import copy
 import torch
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv, global_add_pool
+from ogb.graphproppred.mol_encoder import AtomEncoder, BondEncoder
 
 
 class Normalize(torch.nn.Module):
@@ -20,7 +21,8 @@ class Normalize(torch.nn.Module):
 
 class GConv(torch.nn.Module):
     def __init__(self, input_dim, hidden_dim, num_layers, dropout=0.2,
-                 encoder_norm='batch', projector_norm='batch'):
+                 encoder_norm='batch', projector_norm='batch',
+                 use_atom_encoder: bool = False, use_bond_encoder: bool = False):
         super(GConv, self).__init__()
         self.activation = torch.nn.PReLU()
         self.dropout = dropout
@@ -37,10 +39,26 @@ class GConv(torch.nn.Module):
             torch.nn.PReLU(),
             torch.nn.Dropout(dropout))
 
-    def forward(self, x, edge_index, edge_weight=None):
+        if use_atom_encoder:
+            self.atom_encoder = AtomEncoder(hidden_dim)
+        else:
+            self.atom_encoder = None
+
+        if use_bond_encoder:
+            self.bond_encoder = BondEncoder(hidden_dim)
+        else:
+            self.bond_encoder = None
+
+    def forward(self, x, edge_index, edge_attr=None):
+        if self.atom_encoder is not None:
+            x = self.atom_encoder(x)
+
+        if self.bond_encoder is not None:
+            edge_attr = self.bond_encoder(edge_attr)
+
         z = x
         for conv in self.layers:
-            z = conv(z, edge_index, edge_weight)
+            z = conv(z, edge_index, edge_attr)
             z = self.activation(z)
             z = F.dropout(z, p=self.dropout, training=self.training)
         z = self.batch_norm(z)
@@ -48,7 +66,7 @@ class GConv(torch.nn.Module):
 
 
 class EncoderModel(torch.nn.Module):
-    def __init__(self, encoder, augmentor, hidden_dim, dropout=0.2, predictor_norm='batch',):
+    def __init__(self, encoder, augmentor, hidden_dim, dropout=0.2, predictor_norm='batch'):
         super(EncoderModel, self).__init__()
         self.online_encoder = encoder
         self.target_encoder = None

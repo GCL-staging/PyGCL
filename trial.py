@@ -3,18 +3,21 @@ from typing import *
 import os
 import os.path as osp
 import secrets
-from time import time_ns
+from time import time_ns, perf_counter
 import torch
 from visualdl import LogWriter
 from pl_bolts.optimizers import LinearWarmupCosineAnnealingLR
 
 from tqdm import tqdm
 from time import time_ns
-from GCL.eval import LREvaluator, get_split
+from GCL.eval import LREvaluator, get_split, GeneralLREvaluator, MLPRegEvaluator
 from GCL.utils import seed_everything, batchify_dict
 from GCL.models import EncoderModel, DualBranchContrastModel, MultipleBranchContrastModel
 from HC.config_loader import ConfigLoader
 from torch_geometric.data import DataLoader
+
+from ogb.graphproppred import Evaluator
+from ogb.lsc import PCQM4MEvaluator, PygPCQM4MDataset
 
 from utils import load_dataset, get_activation, get_loss, is_node_dataset, get_augmentor
 from models.GConv import Encoder
@@ -47,12 +50,15 @@ class GCLTrial(object):
         aug1 = augmentor_from_conf(config.augmentor1)
         aug2 = augmentor_from_conf(config.augmentor2)
 
+        is_molecole_dataset = config.dataset in {'ogbg-molhiv', 'PCQM4M-10K'}
         encoder = Encoder(
             input_dim=input_dim,
             hidden_dim=config.encoder.hidden_dim,
             activation=get_activation(config.encoder.activation.value),
             num_layers=config.encoder.num_layers,
-            base_conv=config.encoder.conv.value
+            base_conv=config.encoder.conv.value,
+            use_atom_encoder=is_molecole_dataset,
+            use_bond_encoder=is_molecole_dataset,
         ).to(self.device)
         self.encoder = encoder
 
@@ -97,7 +103,8 @@ class GCLTrial(object):
             )
         else:
             if config.opt.reduce_lr_patience > 0:
-                lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=config.opt.reduce_lr_patience)
+                lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
+                                                                          patience=config.opt.reduce_lr_patience)
             else:
                 lr_scheduler = None
         self.optimizer = optimizer
@@ -163,10 +170,10 @@ class GCLTrial(object):
                 z, g, z1, z2, g1, g2, z3, z4 = self.encoder_model(input_x, data.batch, data.edge_index, data.edge_attr)
             else:
                 z, g, _, _ = self.encoder_model(input_x, data.batch, data.edge_index, data.edge_attr)
-            x.append(z if is_node_dataset(self.config.dataset) else g)
-            y.append(data.y)
-        x = torch.cat(x, dim=0)
-        y = torch.cat(y, dim=0)
+            x.append(z.detach().cpu() if is_node_dataset(self.config.dataset) else g.detach().cpu())
+            y.append(data.y.detach().cpu())
+        x = torch.cat(x, dim=0).to(self.device)
+        y = torch.cat(y, dim=0).to(self.device)
 
         if self.config.dataset.startswith('ogb'):
             split = self.dataset.get_idx_split()
@@ -195,6 +202,32 @@ class GCLTrial(object):
                 result = evaluator.evaluate(x, y, sp)
                 results.append(result)
             result = batchify_dict(results, aggr_func=lambda xs: sum(xs) / len(xs))
+        elif self.config.dataset == 'ogbg-molhiv':
+            def metric(y_true, y_pred):
+                evaluator = Evaluator(name='ogbg-molhiv')
+                res = evaluator.eval(
+                    {
+                        'y_true': y_true.view(-1, 1),
+                        'y_pred': y_pred.view(-1, 1)
+                    }
+                )
+                return res
+
+            evaluator = GeneralLREvaluator(metric, metric_name='rocauc', mute_pbar=self.mute_pbar)
+            result = evaluator.evaluate(x, y.view(-1), split)
+        elif self.config.dataset == 'PCQM4M-10K':
+            def metric(y_true, y_pred):
+                evaluator = PCQM4MEvaluator()
+                res = evaluator.eval(
+                    {
+                        'y_true': y_true.view(-1),
+                        'y_pred': y_pred.view(-1)
+                    }
+                )
+                return res
+
+            evaluator = MLPRegEvaluator(metric, metric_name='mae', mute_pbar=self.mute_pbar)
+            result = evaluator.evaluate(x, y.view(-1), split)
         else:
             evaluator = LREvaluator(mute_pbar=self.mute_pbar)
             result = evaluator.evaluate(x, y, split)
@@ -209,7 +242,9 @@ class GCLTrial(object):
             pbar = tqdm(total=self.config.opt.num_epochs, desc='(T)')
 
         for epoch in range(1, self.config.opt.num_epochs + 1):
+            tic = perf_counter()
             loss = self.train_step()
+            toc = perf_counter()
             if self.config.obj.loss == Objective.BarlowTwins:
                 self.lr_scheduler.step()  # noqa
             else:
@@ -217,8 +252,12 @@ class GCLTrial(object):
                     self.lr_scheduler.step(loss)
 
             if not self.mute_pbar:
-                pbar.set_postfix({'loss': f'{loss:.4f}', 'wait': self.wait_window, 'lr': self.optimizer_lr})
+                pbar.set_postfix({'loss': f'{loss:.9f}', 'wait': self.wait_window, 'lr': self.optimizer_lr})
                 pbar.update()
+            else:
+                print(f'epoch {epoch}, loss {loss}, wait {self.wait_window}, lr: {self.optimizer_lr}, time {toc - tic}')
+                results = self.evaluate()
+                print(f'epoch {epoch}, test result {results}')
 
             for cb in self.train_step_cbs:
                 cb({'loss': loss})
@@ -273,13 +312,14 @@ class GCLTrial(object):
 
 if __name__ == '__main__':
     import pretty_errors  # noqa
-    loader = ConfigLoader(model=ExpConfig, config='params/GRACE/general.json')
+
+    loader = ConfigLoader(model=ExpConfig, config='params/ogbg_molhiv.json')
     config = loader()
 
     printer = PrettyPrinter(indent=2)
     printer.pprint(asdict(config))
 
-    trial = GCLTrial(config)
+    trial = GCLTrial(config, mute_pbar=True)
     result = trial.execute()
 
     print("=== Final ===")

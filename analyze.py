@@ -122,6 +122,32 @@ def extra_e2(results):
 
 
 @register
+def prob_sensitivity(results):
+    for x in results:
+        if 'error' in x:
+            print(f"error in trial {x['config'].augmentor1.scheme}: {x['error']}")
+
+        print(x['config'].augmentor1.EA.prob)
+
+    data = group_with(lambda x: (x['config'].augmentor1.EA.prob, x['result']), results)
+
+    prob_list = [0.01, 0.05, 0.1, 0.2, 0.5, 0.6, 0.7, 0.8]
+
+    table = []
+    for prob in prob_list:
+        row = [prob]
+        if prob in data:
+            acc = data[prob][0]['micro_f1']
+            txt = f'{acc["mean"]:.6f} +- {acc["std"]:.6f}'
+            row.append(txt)
+        else:
+            row.append('---')
+        table.append(row)
+
+    print(tabulate(table, headers=['Prob', 'Acc']))
+
+
+@register
 def general_e1(results):
     for x in results:
         if 'error' in x:

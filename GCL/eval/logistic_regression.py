@@ -19,8 +19,12 @@ class LogisticRegression(nn.Module):
 
 
 class LREvaluator(BaseEvaluator):
-    def __init__(self, num_epochs: int = 5000, learning_rate: float = 0.01,
-                 weight_decay: float = 0.0, test_interval: int = 20, binary: bool = False, mute_pbar: bool = False):
+    def __init__(self,
+                 num_epochs: int = 5000,
+                 learning_rate: float = 0.01, weight_decay: float = 0.0,
+                 test_interval: int = 20,
+                 binary: bool = False,
+                 mute_pbar: bool = False):
         self.num_epochs = num_epochs
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
@@ -96,4 +100,91 @@ class LREvaluator(BaseEvaluator):
         return {
             'micro_f1': best_test_micro,
             'macro_f1': best_val_micro
+        }
+
+
+class GeneralLREvaluator(BaseEvaluator):
+    def __init__(self,
+                 metric,
+                 metric_name: str,
+                 num_epochs: int = 5000,
+                 learning_rate: float = 0.01, weight_decay: float = 0.0,
+                 test_interval: int = 20,
+                 binary: bool = False,
+                 mute_pbar: bool = False):
+        self.num_epochs = num_epochs
+        self.learning_rate = learning_rate
+        self.weight_decay = weight_decay
+        self.test_interval = test_interval
+        self.mute_pbar = mute_pbar
+        self.binary = binary
+        self.metric = metric
+        self.metric_name = metric_name
+
+    def evaluate(self, x: torch.FloatTensor, y: torch.LongTensor, split: dict):
+        device = x.device
+        x = x.detach().to(device)
+        input_dim = x.size()[1]
+        y = y.to(device)
+
+        num_classes = y.max().item() + 1
+
+        if self.binary:
+            assert num_classes == 2, f'Binary classification only handle 2 classes, but found {num_classes}.'
+            classifier = LogisticRegression(input_dim, 1).to(device)
+        else:
+            classifier = LogisticRegression(input_dim, num_classes).to(device)
+        optimizer = Adam(classifier.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
+        if self.binary:
+            output_fn = lambda output: output.view(-1)
+            criterion = nn.BCEWithLogitsLoss()
+        else:
+            output_fn = nn.LogSoftmax(dim=-1)
+            criterion = nn.NLLLoss()
+
+        best_val_metric = 0
+        best_test_metric = 0
+        best_epoch = 0
+
+        if not self.mute_pbar:
+            pbar = tqdm(total=self.num_epochs, desc='(LR)',
+                        bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}{postfix}]')
+
+        for epoch in range(self.num_epochs):
+            classifier.train()
+            optimizer.zero_grad()
+
+            output = classifier(x[split['train']])
+            output = output_fn(output)
+            loss = criterion(output, y[split['train']])
+
+            loss.backward()
+            optimizer.step()
+
+            if (epoch + 1) % self.test_interval == 0:
+                classifier.eval()
+                y_test = y[split['test']].detach().cpu()
+                y_pred = classifier(x[split['test']]).argmax(-1).detach().cpu()
+
+                test_metric = self.metric(y_test, y_pred)[self.metric_name]
+
+                y_val = y[split['valid']].detach().cpu()
+                y_pred = classifier(x[split['valid']]).argmax(-1).detach().cpu()
+
+                val_metric = self.metric(y_val, y_pred)[self.metric_name]
+
+                if val_metric > best_val_metric:
+                    best_val_metric = val_metric
+                    best_test_metric = test_metric
+                    best_epoch = epoch
+
+                if not self.mute_pbar:
+                    pbar.set_postfix({f'test': best_test_metric, 'val': best_val_metric})
+                    pbar.update(self.test_interval)
+
+        if not self.mute_pbar:
+            pbar.close()
+
+        return {
+            self.metric_name: best_test_metric
         }
