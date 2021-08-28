@@ -258,8 +258,6 @@ class GCLTrial(object):
                 pbar.update()
             else:
                 print(f'epoch {epoch}, loss {loss}, wait {self.wait_window}, lr: {self.optimizer_lr}, time {toc - tic}')
-                results = self.evaluate()
-                print(f'epoch {epoch}, test result {results}')
 
             for cb in self.train_step_cbs:
                 cb({'loss': loss})
@@ -321,7 +319,7 @@ if __name__ == '__main__':
     printer = PrettyPrinter(indent=2)
     printer.pprint(asdict(config))
 
-    trial = GCLTrial(config, mute_pbar=True)
+    trial = GCLTrial(config, mute_pbar=False)
     result = trial.execute()
 
     print("=== Final ===")
