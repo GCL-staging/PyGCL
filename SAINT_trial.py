@@ -36,7 +36,7 @@ class GCLTrial(object):
             self.data, batch_size=config.opt.batch_size, walk_length=2,
             num_steps=32, sample_coverage=100,
             save_dir=self.dataset.processed_dir,
-            num_workers=128
+            num_workers=8
         )
 
         input_dim = 1 if self.dataset.num_features == 0 else self.dataset.num_features

@@ -15,7 +15,7 @@ if __name__ == '__main__':
     config.device = 'cuda'
     config.obj.loss = Objective.InfoNCE
     config.encoder.conv = ConvType.GCNConv
-    config.opt.batch_size = 5000
+    config.opt.batch_size = 500
     config.opt.patience = 500
     config.opt.reduce_lr_patience = -1  # let's disable LR scheduling for now
     config.augmentor1.scheme = 'ER+FM'

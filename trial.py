@@ -96,7 +96,7 @@ class GCLTrial(object):
             chain(encoder_model.parameters(), contrast_model.parameters()),
             lr=config.opt.learning_rate
         )
-        if self.config.obj.loss == Objective.BarlowTwins:
+        if self.config.obj.loss == Objective.BarlowTwins or self.config.dataset == 'ogbg-molhiv':
             lr_scheduler = LinearWarmupCosineAnnealingLR(
                 optimizer=optimizer,
                 warmup_epochs=config.opt.warmup_epoch,
@@ -247,7 +247,7 @@ class GCLTrial(object):
             tic = perf_counter()
             loss = self.train_step()
             toc = perf_counter()
-            if self.config.obj.loss == Objective.BarlowTwins:
+            if self.config.obj.loss == Objective.BarlowTwins or self.config.dataset == 'ogbg-molhiv':
                 self.lr_scheduler.step()  # noqa
             else:
                 if self.lr_scheduler is not None:
@@ -257,9 +257,11 @@ class GCLTrial(object):
                 pbar.set_postfix({'loss': f'{loss:.9f}', 'wait': self.wait_window, 'lr': self.optimizer_lr})
                 pbar.update()
             else:
-                print(f'epoch {epoch}, loss {loss}, wait {self.wait_window}, lr: {self.optimizer_lr}, time {toc - tic}')
-                results = self.evaluate()
-                print(f'epoch {epoch}, test result {results}')
+                print(f'epoch {epoch}, loss {loss}, wait {self.wait_window}, lr {self.optimizer_lr}, time {toc - tic}')
+                # results = self.evaluate()
+                # text = [f'{k} {v}' for k, v in results.items()]
+                # text = ', '.join(text)
+                # print(f'epoch {epoch}, eval: {text}')
 
             for cb in self.train_step_cbs:
                 cb({'loss': loss})
@@ -316,12 +318,12 @@ if __name__ == '__main__':
     import pretty_errors  # noqa
 
     loader = ConfigLoader(model=ExpConfig, config='params/ogbg_molhiv.json')
-    config = loader()
+    loaded_config = loader()
 
     printer = PrettyPrinter(indent=2)
-    printer.pprint(asdict(config))
+    printer.pprint(asdict(loaded_config))
 
-    trial = GCLTrial(config, mute_pbar=True)
+    trial = GCLTrial(loaded_config, mute_pbar=True)
     result = trial.execute()
 
     print("=== Final ===")

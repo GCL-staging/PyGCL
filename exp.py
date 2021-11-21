@@ -283,6 +283,38 @@ def proteins_all_e2():
     return generated
 
 
+
+@register
+def proteins_e2_g2g_cfg():
+    # l2l_config = load_config('/home/xuyichen/dev/PyGCL/params/proteins@l2l.json', after_args={'device': 'cuda'})
+    # g2l_config = load_config('/home/xuyichen/dev/PyGCL/params/proteins@g2l.json', after_args={'device': 'cuda'})
+    g2g_config = load_config('/home/xuyichen/dev/PyGCL/params/proteins@g2g.json', after_args={'device': 'cuda'})
+
+    learning_rate = [0.01, 0.001, 0.0001]
+    weight_decay = [1e-3, 1e-4, 1e-5, 1e-6]
+    num_epochs = [300, 500, 1200, 2000]
+    objective = [Objective.InfoNCE, Objective.JSD, Objective.Triplet]
+    extra_objective = objective + [Objective.BarlowTwins, Objective.VICReg]
+
+    def generate_config(base_cfg: ExpConfig) -> List[ExpConfig]:
+        res = []
+        for lr in learning_rate:
+            for wd in weight_decay:
+                for e in num_epochs:
+                    obj_list = extra_objective if base_cfg.mode != ContrastMode.G2L else objective
+                    for obj in obj_list:
+                        config = deepcopy(base_cfg)
+                        config.opt.learning_rate = lr
+                        config.opt.weight_decay = wd
+                        config.opt.num_epochs = e
+                        config.obj.loss = obj
+                        res.append(config)
+        return res
+
+    generated = [*generate_config(g2g_config)]
+    return generated
+
+
 @register
 def imdbm_all_e2():
     l2l_config = load_config('/home/xuyichen/dev/PyGCL/params/imdb_multi@l2l.json', after_args={'device': 'cuda'})
@@ -387,6 +419,65 @@ def aug_ablation():
         return gen(cfg)
 
     dataset_list = ['nci1', 'proteins', 'imdb_multi']
+    configs = []
+    for dataset in dataset_list:
+        configs = configs + gen_dataset(dataset)
+
+    return configs
+
+
+@register
+def g2l_aug_ablation():
+    aug_list = [
+        'ORI', 'EA', 'ER', 'EA+ER', 'ND', 'PPR', 'MKD', 'RWS', 'ER+FM', 'ER+FD', 'ND+FM', 'ND+FD', 'EA+FM', 'EA+FD',
+        'FM', 'FD',
+        'RWS+FM', 'RWS+FD', 'PPR+ER', 'PPR+FD', 'PPR+ND', 'MKD+ER', 'MKD+FD', 'MKD+ND'
+    ]
+
+    def gen(base_cfg: ExpConfig):
+        res = []
+        for scheme in aug_list:
+            func = ExpConfig._augmentor1._scheme.set(scheme) @ ExpConfig._augmentor2._scheme.set(scheme)
+            res.append(func(base_cfg))
+        return res
+
+    def gen_dataset(dataset: str):
+        path = f'/home/xuyichen/dev/PyGCL/params/{dataset}@g2l.json'
+        cfg = load_config(path, after_args={'device': 'cuda'})
+        cfg.obj.loss = Objective.JSD
+        return gen(cfg)
+
+    dataset_list = ['nci1', 'proteins', 'imdb_multi', 'collab']
+    configs = []
+    for dataset in dataset_list:
+        configs = configs + gen_dataset(dataset)
+
+    return configs
+
+
+@register
+def node_g2l_aug_ablation():
+    aug_list = [
+        'ORI', 'EA', 'ER', 'EA+ER', 'ND', 'PPR', 'MKD', 'RWS', 'ER+FM', 'ER+FD', 'ND+FM', 'ND+FD', 'EA+FM', 'EA+FD',
+        'FM', 'FD',
+        'RWS+FM', 'RWS+FD', 'PPR+ER', 'PPR+FD', 'PPR+ND', 'MKD+ER', 'MKD+FD', 'MKD+ND'
+    ]
+
+    def gen(base_cfg: ExpConfig):
+        res = []
+        for scheme in aug_list:
+            func = ExpConfig._augmentor1._scheme.set(scheme) @ ExpConfig._augmentor2._scheme.set(scheme)
+            res.append(func(base_cfg))
+        return res
+
+    def gen_dataset(dataset: str):
+        path = f'/home/xuyichen/dev/PyGCL/params/{dataset}.json'
+        cfg = load_config(path, after_args={'device': 'cuda'})
+        cfg.mode = ContrastMode.G2L
+        cfg.obj.loss = Objective.JSD
+        return gen(cfg)
+
+    dataset_list = ['wikics', 'amazon_computers', 'coauthor_cs']
     configs = []
     for dataset in dataset_list:
         configs = configs + gen_dataset(dataset)
@@ -580,7 +671,7 @@ def molhiv_all_e1():
     aug_list = [
         'ORI',
         'EA', 'ER', 'EA+ER', 'ND',
-        'PPR',
+        # 'PPR',
         # 'MKD',
         'RWS',
         # 'ER+FM', 'ER+FD',
@@ -610,6 +701,97 @@ def molhiv_all_e1():
         configs = configs + gen_dataset(dataset)
 
     return configs
+
+
+@register
+def pcqm4m_all_e1():
+    aug_list = [
+        'ORI',
+        'EA', 'ER', 'EA+ER', 'ND',
+        # 'PPR',
+        # 'MKD',
+        'RWS',
+        # 'ER+FM', 'ER+FD',
+        # 'ND+FM', 'ND+FD',
+        # 'EA+FM', 'EA+FD',
+        'FM', 'FD',
+        # 'RWS+FM', 'RWS+FD',
+        # 'PPR+ER', 'PPR+FD', 'PPR+ND',
+        # 'MKD+ER', 'MKD+FD', 'MKD+ND'
+    ]
+
+    def gen(base_cfg: ExpConfig):
+        res = []
+        for scheme in aug_list:
+            func = ExpConfig._augmentor1._scheme.set(scheme) @ ExpConfig._augmentor2._scheme.set(scheme)
+            res.append(func(base_cfg))
+        return res
+
+    def gen_dataset(dataset: str):
+        path = f'/home/xuyichen/dev/PyGCL/params/{dataset}.json'
+        cfg = load_config(path, after_args={'device': 'cuda'})
+        return gen(cfg)
+
+    dataset_list = ['pcqm4m10k']
+    configs = []
+    for dataset in dataset_list:
+        configs = configs + gen_dataset(dataset)
+
+    return configs
+
+
+@register
+def proteins_g2g_e2():
+    mode_list = [ContrastMode.L2L, ContrastMode.G2L, ContrastMode.G2G]
+    obj_list = [Objective.InfoNCE, Objective.JSD, Objective.Triplet]
+
+    base_cfg = load_config(f'/home/xuyichen/dev/PyGCL/params/proteins@g2g.json', after_args={'device': 'cuda'})
+
+    res = []
+    for mode in mode_list:
+        for obj in obj_list:
+            cfg = deepcopy(base_cfg)
+            cfg.mode = mode
+            cfg.obj.loss = obj
+            res.append(cfg)
+
+    return res
+
+
+@register
+def molhiv_all_e2():
+    mode_list = [ContrastMode.L2L, ContrastMode.G2L, ContrastMode.G2G]
+    obj_list = [Objective.InfoNCE, Objective.JSD, Objective.Triplet]
+
+    base_cfg = load_config(f'/home/xuyichen/dev/PyGCL/params/ogbg_molhiv.json', after_args={'device': 'cuda'})
+
+    res = []
+    for mode in mode_list:
+        for obj in obj_list:
+            cfg = deepcopy(base_cfg)
+            cfg.mode = mode
+            cfg.obj.loss = obj
+            res.append(cfg)
+
+    return res
+
+
+@register
+def pcqm4m_all_e2():
+    mode_list = [ContrastMode.L2L, ContrastMode.G2L, ContrastMode.G2G]
+    obj_list = [Objective.InfoNCE, Objective.JSD, Objective.Triplet]
+
+    base_cfg = load_config(f'/home/xuyichen/dev/PyGCL/params/pcqm4m10k.json', after_args={'device': 'cuda'})
+
+    res = []
+    for mode in mode_list:
+        for obj in obj_list:
+            cfg = deepcopy(base_cfg)
+            cfg.mode = mode
+            cfg.obj.loss = obj
+            res.append(cfg)
+
+    return res
 
 
 @register

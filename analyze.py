@@ -85,7 +85,7 @@ def general_e2(results):
             if mode in data and obj in data[mode]:
                 acc = data[mode][obj]['result']['micro_f1']['mean']
                 std = data[mode][obj]['result']['micro_f1']['std']
-                row.append(f'{acc * 100:.2f} +- {std * 100:.2f}')
+                row.append(f'{acc:.6f} +- {std:.6f}')
                 cfg: ExpConfig = data[mode][obj]['config']
                 s = f'lr={cfg.opt.learning_rate}'
                 s += f'\nwd={cfg.opt.weight_decay}'
@@ -173,7 +173,7 @@ def general_e1(results):
 
     print(data.keys())
 
-    dataset_list = ['NCI1', 'PROTEINS', 'IMDB-MULTI', 'COLLAB']
+    dataset_list = ['NCI1', 'PROTEINS', 'IMDB-MULTI', 'COLLAB', 'ogbg-molhiv', 'PCQM4M-10K']
     aug_list = [
         'ORI', 'EA', 'ER', 'EA+ER', 'ND', 'PPR', 'MKD', 'RWS',
         'FM', 'FD',
@@ -194,7 +194,7 @@ def general_e1(results):
             if symp in data:
                 acc = data[symp][0]['micro_f1']['mean']
                 std = data[symp][0]['micro_f1']['std']
-                row.append(f'{acc * 100:.2f} +- {std * 100:.2f}')
+                row.append(f'{acc:.6f} +- {std:.6f}')
             else:
                 row.append('---')
         table.append(row)

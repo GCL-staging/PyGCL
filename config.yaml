@@ -8,7 +8,7 @@ searchSpace:
     _value: [0.001, 0.0001, 0.00001, 0.000001, 0.0000001, 0.00000001, 0.000000001]
   opt:num_epochs:
     _type: choice
-    _value: [1000, 1200, 1500, 1800, 2000]
+    _value: [1000, 5000, 10000, 15000]
   encoder:hidden_dim:
     _type: choice
     _value: [256]
@@ -52,4 +52,4 @@ tuner:
 trainingService:
   platform: local
   useActiveGpu: True
-  gpuIndices: 0,1,2,3,4,5,6,7
+  gpuIndices: 4,5,6,7
